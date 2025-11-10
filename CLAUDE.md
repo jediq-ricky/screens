@@ -51,3 +51,10 @@ When working on this project:
 4. Consider scalability for multiple concurrent displays
 5. Prioritize real-time synchronization and reliability
 6. Review relevant documentation in `/docs` before implementing new features
+
+## Git Commit Guidelines
+When creating git commits:
+- Write clear, concise commit messages that describe the changes
+- Focus on what was changed and why
+- Do NOT include AI attribution, co-author tags, or "Generated with Claude Code" footers
+- Keep commit messages professional and to the point
