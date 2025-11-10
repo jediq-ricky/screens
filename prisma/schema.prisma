@@ -1,0 +1,90 @@
+// SCREENS Database Schema
+// Manages videos, displays, playlists, and playback coordination
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Video metadata stored in database, actual files in Vercel Blob
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  blobUrl     String   // Vercel Blob storage URL
+  thumbnailUrl String?  // Optional thumbnail URL
+  duration    Int?     // Duration in seconds
+  fileSize    Int?     // File size in bytes
+  mimeType    String   // Video MIME type (video/mp4, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  playlistItems PlaylistItem[]
+
+  @@index([createdAt])
+}
+
+// Physical display devices
+model Display {
+  id          String    @id @default(cuid())
+  name        String
+  token       String    @unique // Unique authentication token
+  description String?
+  isActive    Boolean   @default(true)
+  lastSeenAt  DateTime? // Last connection timestamp
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  playlist Playlist?
+
+  @@index([token])
+  @@index([isActive, lastSeenAt])
+}
+
+// Playlist assigned to a display
+model Playlist {
+  id           String       @id @default(cuid())
+  displayId    String       @unique
+  playbackMode PlaybackMode @default(SEQUENCE)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  display Display        @relation(fields: [displayId], references: [id], onDelete: Cascade)
+  items   PlaylistItem[]
+
+  @@index([displayId])
+}
+
+// Individual videos in a playlist with ordering
+model PlaylistItem {
+  id         String   @id @default(cuid())
+  playlistId String
+  videoId    String
+  position   Int      // Order in playlist (0-indexed)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, videoId]) // Video can only appear once per playlist
+  @@unique([playlistId, position]) // Each position is unique per playlist
+  @@index([playlistId, position])
+}
+
+// Playback mode enumeration
+enum PlaybackMode {
+  LOOP     // Loop through playlist continuously
+  SEQUENCE // Play through once and stop
+  MANUAL   // Wait for manual trigger from controller
+}
