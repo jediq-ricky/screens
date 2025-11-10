@@ -52,6 +52,16 @@ When working on this project:
 5. Prioritize real-time synchronization and reliability
 6. Review relevant documentation in `/docs` before implementing new features
 
+## Testing Requirements
+**CRITICAL**: All tests must pass before committing code.
+- Zero tolerance for failing tests
+- If tests fail, fix them immediately - do not commit
+- Do not skip, disable, or ignore failing tests
+- Do not create tests that are "known to fail"
+- If a test approach isn't working, refactor the test or implementation
+- Run `npm run test -- --run` before every commit to verify all tests pass
+- Test failures block all commits - no exceptions
+
 ## Git Commit Guidelines
 When creating git commits:
 - Write clear, concise commit messages that describe the changes

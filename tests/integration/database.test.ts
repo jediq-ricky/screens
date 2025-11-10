@@ -1,31 +1,8 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { PrismaClient, PlaybackMode } from "@/lib/generated/prisma";
+import { describe, it, expect } from "vitest";
+import { PlaybackMode } from "@/lib/generated/prisma";
+import { testPrisma as prisma, setupIntegrationTest } from "../setup";
 
-// Use a separate test database instance
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL_TEST || process.env.DATABASE_URL,
-    },
-  },
-});
-
-// Helper to clean database between tests
-async function cleanDatabase() {
-  await prisma.playlistItem.deleteMany();
-  await prisma.playlist.deleteMany();
-  await prisma.display.deleteMany();
-  await prisma.video.deleteMany();
-}
-
-beforeEach(async () => {
-  await cleanDatabase();
-});
-
-afterAll(async () => {
-  await cleanDatabase();
-  await prisma.$disconnect();
-});
+setupIntegrationTest();
 
 describe("Database Schema Tests", () => {
   describe("Video Model", () => {
