@@ -5,7 +5,7 @@ import PlaylistsPage from "@/app/controller/playlists/page";
 // Mock the prisma module
 vi.mock("@/lib/db", () => ({
   prisma: {
-    display: {
+    playlist: {
       findMany: vi.fn(),
     },
   },
@@ -13,46 +13,54 @@ vi.mock("@/lib/db", () => ({
 
 import { prisma } from "@/lib/db";
 
-const mockDisplaysWithPlaylists = [
+const mockPlaylists = [
   {
-    id: "1",
-    name: "Display 1",
-    description: "Test display 1",
-    token: "token123",
+    id: "p1",
+    displayId: "1",
+    playbackMode: "LOOP",
     isActive: true,
-    lastSeenAt: null,
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
-    playlist: {
-      id: "p1",
-      displayId: "1",
-      playbackMode: "LOOP",
+    display: {
+      id: "1",
+      name: "Display 1",
+      description: "Test display 1",
+      token: "token123",
       isActive: true,
+      lastSeenAt: null,
       createdAt: new Date("2024-01-01"),
       updatedAt: new Date("2024-01-01"),
-      _count: {
-        items: 5,
-      },
+    },
+    _count: {
+      items: 5,
     },
   },
   {
-    id: "2",
-    name: "Display 2",
-    description: null,
-    token: "token456",
+    id: "p2",
+    displayId: "2",
+    playbackMode: "SEQUENCE",
     isActive: false,
-    lastSeenAt: null,
     createdAt: new Date("2024-01-02"),
     updatedAt: new Date("2024-01-02"),
-    playlist: null,
+    display: {
+      id: "2",
+      name: "Display 2",
+      description: null,
+      token: "token456",
+      isActive: false,
+      lastSeenAt: null,
+      createdAt: new Date("2024-01-02"),
+      updatedAt: new Date("2024-01-02"),
+    },
+    _count: {
+      items: 0,
+    },
   },
 ];
 
 describe("PlaylistsPage Component", () => {
   it("should render playlists heading", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
@@ -60,10 +68,8 @@ describe("PlaylistsPage Component", () => {
     expect(screen.getByText("Playlists")).toBeInTheDocument();
   });
 
-  it("should render displays with playlists", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+  it("should render playlists with display names", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
@@ -72,65 +78,50 @@ describe("PlaylistsPage Component", () => {
     expect(screen.getByText("Display 2")).toBeInTheDocument();
   });
 
-  it("should show playlist details for configured playlists", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+  it("should show playlist details", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    // Check playback mode
+    // Check playback modes
     expect(screen.getByText(/loop/i)).toBeInTheDocument();
+    expect(screen.getByText(/sequence/i)).toBeInTheDocument();
 
     // Check video count
-    expect(screen.getByText(/Videos:/)).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("0")).toBeInTheDocument();
 
-    // Check active status
+    // Check active/inactive status
     expect(screen.getByText("Active")).toBeInTheDocument();
+    expect(screen.getByText("Inactive")).toBeInTheDocument();
   });
 
-  it("should show 'No playlist configured' for displays without playlists", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+  it("should render edit playlist buttons", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    expect(screen.getByText("No playlist configured")).toBeInTheDocument();
+    const editButtons = screen.getAllByText("Edit Playlist");
+    expect(editButtons).toHaveLength(2);
   });
 
-  it("should render edit/create playlist buttons", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+  it("should show empty state when no playlists exist", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue([]);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    expect(screen.getByText("Edit Playlist")).toBeInTheDocument();
-    expect(screen.getByText("Create Playlist")).toBeInTheDocument();
-  });
-
-  it("should show empty state when no displays exist", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue([]);
-
-    const Page = await PlaylistsPage();
-    render(Page);
-
-    expect(screen.getByText("No displays found")).toBeInTheDocument();
+    expect(screen.getByText("No playlists found")).toBeInTheDocument();
     expect(
-      screen.getByText("Create a display first to configure playlists")
+      screen.getByText("Create a playlist by configuring a display")
     ).toBeInTheDocument();
     expect(screen.getByText("Go to Displays")).toBeInTheDocument();
   });
 
   it("should render display descriptions when available", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue(
-      mockDisplaysWithPlaylists
-    );
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
@@ -138,43 +129,8 @@ describe("PlaylistsPage Component", () => {
     expect(screen.getByText("Test display 1")).toBeInTheDocument();
   });
 
-  it("should show inactive status badge", async () => {
-    const inactiveDisplay = [
-      {
-        id: "3",
-        name: "Display 3",
-        description: null,
-        token: "token789",
-        isActive: true,
-        lastSeenAt: null,
-        createdAt: new Date("2024-01-03"),
-        updatedAt: new Date("2024-01-03"),
-        playlist: {
-          id: "p3",
-          displayId: "3",
-          playbackMode: "SEQUENCE",
-          isActive: false,
-          createdAt: new Date("2024-01-03"),
-          updatedAt: new Date("2024-01-03"),
-          _count: {
-            items: 2,
-          },
-        },
-      },
-    ];
-
-    vi.mocked(prisma.display.findMany).mockResolvedValue(inactiveDisplay);
-
-    const Page = await PlaylistsPage();
-    render(Page);
-
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
-  });
-
-  it("should render correct link to edit playlist", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue([
-      mockDisplaysWithPlaylists[0],
-    ]);
+  it("should render correct links to edit playlists", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue([mockPlaylists[0]]);
 
     const Page = await PlaylistsPage();
     render(Page);
@@ -183,15 +139,31 @@ describe("PlaylistsPage Component", () => {
     expect(editLink).toHaveAttribute("href", "/controller/playlists/1");
   });
 
-  it("should render correct link to create playlist", async () => {
-    vi.mocked(prisma.display.findMany).mockResolvedValue([
-      mockDisplaysWithPlaylists[1],
-    ]);
+  it("should show active status badge for active playlists", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue([mockPlaylists[0]]);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    const createLink = screen.getByText("Create Playlist").closest("a");
-    expect(createLink).toHaveAttribute("href", "/controller/playlists/2");
+    expect(screen.getByText("Active")).toBeInTheDocument();
+  });
+
+  it("should show inactive status badge for inactive playlists", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue([mockPlaylists[1]]);
+
+    const Page = await PlaylistsPage();
+    render(Page);
+
+    expect(screen.getByText("Inactive")).toBeInTheDocument();
+  });
+
+  it("should display video count for playlists", async () => {
+    vi.mocked(prisma.playlist.findMany).mockResolvedValue([mockPlaylists[0]]);
+
+    const Page = await PlaylistsPage();
+    render(Page);
+
+    expect(screen.getByText(/Videos:/)).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
   });
 });

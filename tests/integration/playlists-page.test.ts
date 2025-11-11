@@ -11,7 +11,7 @@ describe("Playlists Page Data", () => {
     await testPrisma.video.deleteMany();
   });
 
-  it("should fetch displays with playlist data", async () => {
+  it("should fetch playlists with display data", async () => {
     // Create a display with a playlist
     const display1 = await testPrisma.display.create({
       data: {
@@ -20,7 +20,7 @@ describe("Playlists Page Data", () => {
       },
     });
 
-    const playlist = await testPrisma.playlist.create({
+    const playlist1 = await testPrisma.playlist.create({
       data: {
         displayId: display1.id,
         playbackMode: "LOOP",
@@ -49,7 +49,7 @@ describe("Playlists Page Data", () => {
 
     await testPrisma.playlistItem.create({
       data: {
-        playlistId: playlist.id,
+        playlistId: playlist1.id,
         videoId: video1.id,
         position: 0,
       },
@@ -57,13 +57,13 @@ describe("Playlists Page Data", () => {
 
     await testPrisma.playlistItem.create({
       data: {
-        playlistId: playlist.id,
+        playlistId: playlist1.id,
         videoId: video2.id,
         position: 1,
       },
     });
 
-    // Create a display without a playlist
+    // Create another display with a playlist
     const display2 = await testPrisma.display.create({
       data: {
         name: "Display 2",
@@ -71,58 +71,70 @@ describe("Playlists Page Data", () => {
       },
     });
 
-    // Fetch displays with playlist data
-    const displays = await testPrisma.display.findMany({
+    const playlist2 = await testPrisma.playlist.create({
+      data: {
+        displayId: display2.id,
+        playbackMode: "SEQUENCE",
+        isActive: false,
+      },
+    });
+
+    // Fetch playlists with display data
+    const playlists = await testPrisma.playlist.findMany({
       include: {
-        playlist: {
-          include: {
-            _count: {
-              select: { items: true },
-            },
-          },
+        display: true,
+        _count: {
+          select: { items: true },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    expect(displays).toHaveLength(2);
+    expect(playlists).toHaveLength(2);
 
-    // Check display with playlist
-    const displayWithPlaylist = displays.find((d) => d.id === display1.id);
-    expect(displayWithPlaylist).toBeDefined();
-    expect(displayWithPlaylist?.playlist).toBeDefined();
-    expect(displayWithPlaylist?.playlist?.playbackMode).toBe("LOOP");
-    expect(displayWithPlaylist?.playlist?.isActive).toBe(true);
-    expect(displayWithPlaylist?.playlist?._count.items).toBe(2);
+    // Check playlist with items
+    const playlistWithItems = playlists.find((p) => p.id === playlist1.id);
+    expect(playlistWithItems).toBeDefined();
+    expect(playlistWithItems?.playbackMode).toBe("LOOP");
+    expect(playlistWithItems?.isActive).toBe(true);
+    expect(playlistWithItems?._count.items).toBe(2);
+    expect(playlistWithItems?.display.name).toBe("Display 1");
 
-    // Check display without playlist
-    const displayWithoutPlaylist = displays.find((d) => d.id === display2.id);
-    expect(displayWithoutPlaylist).toBeDefined();
-    expect(displayWithoutPlaylist?.playlist).toBeNull();
+    // Check playlist without items
+    const playlistWithoutItems = playlists.find((p) => p.id === playlist2.id);
+    expect(playlistWithoutItems).toBeDefined();
+    expect(playlistWithoutItems?.playbackMode).toBe("SEQUENCE");
+    expect(playlistWithoutItems?.isActive).toBe(false);
+    expect(playlistWithoutItems?._count.items).toBe(0);
+    expect(playlistWithoutItems?.display.name).toBe("Display 2");
   });
 
-  it("should return empty array when no displays exist", async () => {
-    const displays = await testPrisma.display.findMany({
+  it("should return empty array when no playlists exist", async () => {
+    const playlists = await testPrisma.playlist.findMany({
       include: {
-        playlist: {
-          include: {
-            _count: {
-              select: { items: true },
-            },
-          },
+        display: true,
+        _count: {
+          select: { items: true },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    expect(displays).toHaveLength(0);
+    expect(playlists).toHaveLength(0);
   });
 
-  it("should order displays by createdAt descending", async () => {
+  it("should order playlists by createdAt descending", async () => {
     const display1 = await testPrisma.display.create({
       data: {
         name: "First Display",
         token: "token12345678901234567890123456",
+      },
+    });
+
+    const playlist1 = await testPrisma.playlist.create({
+      data: {
+        displayId: display1.id,
+        playbackMode: "LOOP",
         createdAt: new Date("2024-01-01"),
       },
     });
@@ -131,25 +143,29 @@ describe("Playlists Page Data", () => {
       data: {
         name: "Second Display",
         token: "token22345678901234567890123456",
+      },
+    });
+
+    const playlist2 = await testPrisma.playlist.create({
+      data: {
+        displayId: display2.id,
+        playbackMode: "SEQUENCE",
         createdAt: new Date("2024-01-02"),
       },
     });
 
-    const displays = await testPrisma.display.findMany({
+    const playlists = await testPrisma.playlist.findMany({
       include: {
-        playlist: {
-          include: {
-            _count: {
-              select: { items: true },
-            },
-          },
+        display: true,
+        _count: {
+          select: { items: true },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    expect(displays[0].id).toBe(display2.id);
-    expect(displays[1].id).toBe(display1.id);
+    expect(playlists[0].id).toBe(playlist2.id);
+    expect(playlists[1].id).toBe(playlist1.id);
   });
 
   it("should correctly count playlist items", async () => {
@@ -187,18 +203,15 @@ describe("Playlists Page Data", () => {
       });
     }
 
-    const displays = await testPrisma.display.findMany({
+    const playlists = await testPrisma.playlist.findMany({
       include: {
-        playlist: {
-          include: {
-            _count: {
-              select: { items: true },
-            },
-          },
+        display: true,
+        _count: {
+          select: { items: true },
         },
       },
     });
 
-    expect(displays[0].playlist?._count.items).toBe(3);
+    expect(playlists[0]._count.items).toBe(3);
   });
 });

@@ -2,14 +2,11 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 
 export default async function PlaylistsPage() {
-  const displays = await prisma.display.findMany({
+  const playlists = await prisma.playlist.findMany({
     include: {
-      playlist: {
-        include: {
-          _count: {
-            select: { items: true },
-          },
-        },
+      display: true,
+      _count: {
+        select: { items: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -21,11 +18,11 @@ export default async function PlaylistsPage() {
         <h1 className="text-3xl font-bold text-gray-900">Playlists</h1>
       </div>
 
-      {displays.length === 0 ? (
+      {playlists.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No displays found</p>
+          <p className="text-gray-500 text-lg">No playlists found</p>
           <p className="text-gray-400 mt-2">
-            Create a display first to configure playlists
+            Create a playlist by configuring a display
           </p>
           <Link
             href="/controller/displays"
@@ -36,54 +33,48 @@ export default async function PlaylistsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displays.map((display) => (
+          {playlists.map((playlist) => (
             <div
-              key={display.id}
+              key={playlist.id}
               className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow"
             >
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {display.name}
+                  {playlist.display.name}
                 </h3>
-                {display.description && (
+                {playlist.display.description && (
                   <p className="text-sm text-gray-600 mb-4">
-                    {display.description}
+                    {playlist.display.description}
                   </p>
                 )}
 
-                {display.playlist ? (
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Playback Mode:</span>{" "}
-                      {display.playlist.playbackMode.toLowerCase()}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Videos:</span>{" "}
-                      {display.playlist._count.items}
-                    </div>
-                    <div className="text-sm">
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          display.playlist.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {display.playlist.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </div>
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Playback Mode:</span>{" "}
+                    {playlist.playbackMode.toLowerCase()}
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">
-                    No playlist configured
-                  </p>
-                )}
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Videos:</span>{" "}
+                    {playlist._count.items}
+                  </div>
+                  <div className="text-sm">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        playlist.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {playlist.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
 
                 <Link
-                  href={`/controller/playlists/${display.id}`}
+                  href={`/controller/playlists/${playlist.displayId}`}
                   className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
-                  {display.playlist ? "Edit Playlist" : "Create Playlist"}
+                  Edit Playlist
                 </Link>
               </div>
             </div>
