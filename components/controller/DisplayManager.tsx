@@ -52,6 +52,27 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
     }
   };
 
+  const handleDelete = async (displayId: string, displayName: string) => {
+    if (!confirm(`Are you sure you want to delete "${displayName}"? This will also delete its playlist.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/displays/${displayId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete display");
+      }
+
+      // Remove from state
+      setDisplays(displays.filter((d) => d.id !== displayId));
+    } catch (error) {
+      alert("Failed to delete display. Please try again.");
+    }
+  };
+
   return (
     <div>
       {/* Create New Display Button */}
@@ -176,12 +197,20 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
                   </div>
                 )}
 
-                <Link
-                  href={`/controller/playlists/${display.id}`}
-                  className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Configure Playlist
-                </Link>
+                <div className="space-y-2">
+                  <Link
+                    href={`/controller/playlists/${display.id}`}
+                    className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Configure Playlist
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(display.id, display.name)}
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                  >
+                    Delete Display
+                  </button>
+                </div>
               </div>
             </div>
           ))}

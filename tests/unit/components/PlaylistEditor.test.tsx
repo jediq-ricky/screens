@@ -6,6 +6,9 @@ import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/pri
 // Mock fetch
 global.fetch = vi.fn();
 
+// Mock confirm
+global.confirm = vi.fn();
+
 type DisplayWithPlaylist = Display & {
   playlist: (Playlist & {
     items: (PlaylistItem & {
@@ -369,5 +372,105 @@ describe("PlaylistEditor", () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent("Video 1");
     expect(items[1]).toHaveTextContent("Video 2");
+  });
+
+  it("should show delete playlist button when playlist exists", () => {
+    const displayWithPlaylist: DisplayWithPlaylist = {
+      ...mockDisplayWithoutPlaylist,
+      playlist: {
+        id: "playlist-1",
+        displayId: "display-1",
+        playbackMode: "SEQUENCE",
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        items: [],
+      },
+    };
+
+    render(
+      <PlaylistEditor
+        display={displayWithPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /delete playlist/i })).toBeInTheDocument();
+  });
+
+  it("should delete playlist when delete button is clicked and confirmed", async () => {
+    const displayWithPlaylist: DisplayWithPlaylist = {
+      ...mockDisplayWithoutPlaylist,
+      playlist: {
+        id: "playlist-1",
+        displayId: "display-1",
+        playbackMode: "SEQUENCE",
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        items: [],
+      },
+    };
+
+    (global.confirm as ReturnType<typeof vi.fn>).mockReturnValueOnce(true);
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+    });
+
+    const { user } = render(
+      <PlaylistEditor
+        display={displayWithPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const deleteButton = screen.getByRole("button", { name: /delete playlist/i });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/playlists/playlist-1",
+        expect.objectContaining({
+          method: "DELETE",
+        })
+      );
+    });
+
+    // Should show the "no playlist" state
+    expect(screen.getByText(/no playlist configured/i)).toBeInTheDocument();
+  });
+
+  it("should not delete playlist when delete is cancelled", async () => {
+    const displayWithPlaylist: DisplayWithPlaylist = {
+      ...mockDisplayWithoutPlaylist,
+      playlist: {
+        id: "playlist-1",
+        displayId: "display-1",
+        playbackMode: "SEQUENCE",
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        items: [],
+      },
+    };
+
+    (global.confirm as ReturnType<typeof vi.fn>).mockReturnValueOnce(false);
+
+    const { user } = render(
+      <PlaylistEditor
+        display={displayWithPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const deleteButton = screen.getByRole("button", { name: /delete playlist/i });
+    await user.click(deleteButton);
+
+    // Should not make API call
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    // Playlist should still be there
+    expect(screen.queryByText(/no playlist configured/i)).not.toBeInTheDocument();
   });
 });

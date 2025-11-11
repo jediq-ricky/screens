@@ -106,6 +106,29 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
     }
   };
 
+  const handleDeletePlaylist = async () => {
+    if (!playlist) return;
+
+    if (!confirm("Are you sure you want to delete this playlist? All playlist items will be removed.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/playlists/${playlist.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete playlist");
+      }
+
+      // Reset playlist state
+      setPlaylist(null);
+    } catch (error) {
+      alert("Failed to delete playlist. Please try again.");
+    }
+  };
+
   const videoIdsInPlaylist = new Set(playlist?.items?.map((item) => item.videoId) || []);
   const availableToAdd = availableVideos.filter((v) => !videoIdsInPlaylist.has(v.id));
 
@@ -130,21 +153,31 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
           </div>
         ) : (
           <div className="space-y-4">
-            <div>
-              <label htmlFor="playback-mode" className="block text-sm font-medium text-gray-700 mb-2">
-                Playback Mode
-              </label>
-              <select
-                id="playback-mode"
-                aria-label="Playback Mode"
-                value={playlist.playbackMode}
-                onChange={(e) => handleChangePlaybackMode(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="SEQUENCE">Sequence</option>
-                <option value="LOOP">Loop</option>
-                <option value="MANUAL">Manual</option>
-              </select>
+            <div className="flex items-center justify-between">
+              <div className="flex-1 mr-4">
+                <label htmlFor="playback-mode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Playback Mode
+                </label>
+                <select
+                  id="playback-mode"
+                  aria-label="Playback Mode"
+                  value={playlist.playbackMode}
+                  onChange={(e) => handleChangePlaybackMode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="SEQUENCE">Sequence</option>
+                  <option value="LOOP">Loop</option>
+                  <option value="MANUAL">Manual</option>
+                </select>
+              </div>
+              <div className="pt-7">
+                <button
+                  onClick={handleDeletePlaylist}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                >
+                  Delete Playlist
+                </button>
+              </div>
             </div>
 
             <div>

@@ -35,6 +35,9 @@ const mockDisplays: DisplayWithPlaylist[] = [
 // Mock fetch
 global.fetch = vi.fn();
 
+// Mock confirm
+global.confirm = vi.fn();
+
 describe("DisplayManager Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -142,5 +145,63 @@ describe("DisplayManager Component", () => {
 
     // Check for "Last seen:" text
     expect(screen.getByText(/Last seen:/)).toBeInTheDocument();
+  });
+
+  it("should render delete button for each display", () => {
+    render(<DisplayManager initialDisplays={mockDisplays} />);
+
+    const deleteButtons = screen.getAllByText("Delete Display");
+    expect(deleteButtons).toHaveLength(2);
+  });
+
+  it("should delete display when confirmed", async () => {
+    vi.mocked(confirm).mockReturnValue(true);
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+    } as Response);
+
+    const { user } = render(<DisplayManager initialDisplays={mockDisplays} />);
+
+    const deleteButtons = screen.getAllByText("Delete Display");
+    await user.click(deleteButtons[0]);
+
+    // Check confirm was called
+    expect(confirm).toHaveBeenCalledWith(
+      'Are you sure you want to delete "Lobby Display"? This will also delete its playlist.'
+    );
+
+    // Check API was called
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith("/api/displays/1", {
+        method: "DELETE",
+      });
+    });
+
+    // Check display was removed from UI
+    await waitFor(() => {
+      expect(screen.queryByText("Lobby Display")).not.toBeInTheDocument();
+    });
+
+    // Second display should still be there
+    expect(screen.getByText("Conference Room")).toBeInTheDocument();
+  });
+
+  it("should not delete display when cancelled", async () => {
+    vi.mocked(confirm).mockReturnValue(false);
+
+    const { user } = render(<DisplayManager initialDisplays={mockDisplays} />);
+
+    const deleteButtons = screen.getAllByText("Delete Display");
+    await user.click(deleteButtons[0]);
+
+    // Check confirm was called
+    expect(confirm).toHaveBeenCalled();
+
+    // Check API was NOT called
+    expect(fetch).not.toHaveBeenCalled();
+
+    // Both displays should still be there
+    expect(screen.getByText("Lobby Display")).toBeInTheDocument();
+    expect(screen.getByText("Conference Room")).toBeInTheDocument();
   });
 });
