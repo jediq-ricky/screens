@@ -2,16 +2,22 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Playlist Configuration", () => {
   test("should allow creating a playlist and adding videos", async ({ page }) => {
+    // Create a unique display name
+    const displayName = `E2E Playlist Test ${Date.now()}`;
+
     await page.goto("/controller/displays");
 
     // Create a new display
     await page.click('button:has-text("+ New Display")');
-    await page.fill('input[placeholder*="Lobby Display"]', "E2E Test Display");
+    await page.fill('input[placeholder*="Lobby Display"]', displayName);
     await page.click('button:has-text("Create Display")');
 
-    // Wait for display to be created and click configure playlist
-    await expect(page.locator("text=E2E Test Display")).toBeVisible();
-    await page.click('a:has-text("Configure Playlist")');
+    // Wait for the specific display card we just created
+    const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
+    await expect(displayCard).toBeVisible({ timeout: 10000 });
+
+    // Click configure playlist within THIS card
+    await displayCard.locator('a:has-text("Configure Playlist")').click();
 
     // Should show no playlist message
     await expect(page.locator("text=No playlist configured")).toBeVisible();
