@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Video } from "@/lib/generated/prisma";
+import VideoUpload from "./VideoUpload";
 
 interface VideoLibraryProps {
   initialVideos: Video[];
@@ -10,22 +11,62 @@ interface VideoLibraryProps {
 export default function VideoLibrary({ initialVideos }: VideoLibraryProps) {
   const [videos, setVideos] = useState(initialVideos);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showUpload, setShowUpload] = useState(false);
 
   const filteredVideos = videos.filter((video) =>
     video.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleUploadComplete = (video: Video) => {
+    setVideos([video, ...videos]);
+    setShowUpload(false);
+  };
+
+  const handleDelete = async (videoId: string) => {
+    if (!confirm("Are you sure you want to delete this video?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/videos/${videoId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete video");
+      }
+
+      // Remove from state
+      setVideos(videos.filter((v) => v.id !== videoId));
+    } catch (error) {
+      alert("Failed to delete video. Please try again.");
+    }
+  };
+
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex gap-4">
         <input
           type="text"
           placeholder="Search videos..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
+        <button
+          onClick={() => setShowUpload(!showUpload)}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          {showUpload ? "Cancel" : "Upload Video"}
+        </button>
       </div>
+
+      {showUpload && (
+        <div className="mb-6 bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Upload New Video</h2>
+          <VideoUpload onUploadComplete={handleUploadComplete} />
+        </div>
+      )}
 
       {filteredVideos.length === 0 ? (
         <div className="text-center py-12">
@@ -89,6 +130,12 @@ export default function VideoLibrary({ initialVideos }: VideoLibraryProps) {
                       : "—"}
                   </span>
                 </div>
+                <button
+                  onClick={() => handleDelete(video.id)}
+                  className="mt-4 w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}

@@ -93,4 +93,40 @@ describe("VideoLibrary Component", () => {
 
     expect(screen.getByText("Test Video 1")).toBeInTheDocument();
   });
+
+  it("should render delete button for each video", () => {
+    render(<VideoLibrary initialVideos={mockVideos} />);
+
+    const deleteButtons = screen.getAllByText("Delete");
+    expect(deleteButtons).toHaveLength(2);
+  });
+
+  it("should delete video when delete button is clicked and confirmed", async () => {
+    global.confirm = () => true;
+    global.fetch = async () =>
+      new Response(null, { status: 204 }) as Response;
+
+    const { user } = render(<VideoLibrary initialVideos={mockVideos} />);
+
+    const deleteButtons = screen.getAllByText("Delete");
+    await user.click(deleteButtons[0]);
+
+    // First video should be removed
+    expect(screen.queryByText("Test Video 1")).not.toBeInTheDocument();
+    // Second video should still be there
+    expect(screen.getByText("Test Video 2")).toBeInTheDocument();
+  });
+
+  it("should not delete video when delete is cancelled", async () => {
+    global.confirm = () => false;
+
+    const { user } = render(<VideoLibrary initialVideos={mockVideos} />);
+
+    const deleteButtons = screen.getAllByText("Delete");
+    await user.click(deleteButtons[0]);
+
+    // Both videos should still be there
+    expect(screen.getByText("Test Video 1")).toBeInTheDocument();
+    expect(screen.getByText("Test Video 2")).toBeInTheDocument();
+  });
 });

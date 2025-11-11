@@ -53,4 +53,7 @@ yarn-error.log*
 tmp
 temp
 
+# Uploaded files
+public/uploads
+
 /lib/generated/prisma
