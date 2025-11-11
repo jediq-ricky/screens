@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
 
 type DisplayWithPlaylist = Display & {
@@ -174,6 +175,13 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
                     Last seen: {new Date(display.lastSeenAt).toLocaleString()}
                   </div>
                 )}
+
+                <Link
+                  href={`/controller/playlists/${display.id}`}
+                  className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                >
+                  Configure Playlist
+                </Link>
               </div>
             </div>
           ))}
