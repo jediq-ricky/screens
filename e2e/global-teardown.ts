@@ -54,6 +54,33 @@ async function globalTeardown() {
       });
     }
 
+    // Delete all videos that start with "E2E"
+    const videos = await prisma.video.findMany({
+      where: {
+        title: {
+          startsWith: "E2E",
+        },
+      },
+    });
+
+    console.log(`Cleaning up ${videos.length} E2E test videos...`);
+
+    for (const video of videos) {
+      // Delete playlist items that reference this video
+      await prisma.playlistItem.deleteMany({
+        where: { videoId: video.id },
+      });
+
+      // Delete video file from storage if it exists
+      // Note: We don't actually delete from filesystem in tests
+      // as the files are typically test fixtures
+
+      // Delete video
+      await prisma.video.delete({
+        where: { id: video.id },
+      });
+    }
+
     console.log("E2E cleanup complete");
   } catch (error) {
     console.error("Error during E2E cleanup:", error);
