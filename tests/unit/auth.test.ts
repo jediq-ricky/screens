@@ -17,18 +17,18 @@ describe("Authentication", () => {
       expect(token1).not.toBe(token2);
     });
 
-    it("should generate tokens of sufficient length", () => {
+    it("should generate tokens of correct length", () => {
       const token = generateDisplayToken();
 
-      // Should be at least 32 characters for security
-      expect(token.length).toBeGreaterThanOrEqual(32);
+      // Should be exactly 5 characters
+      expect(token.length).toBe(5);
     });
 
-    it("should generate URL-safe tokens", () => {
+    it("should generate hex tokens", () => {
       const token = generateDisplayToken();
 
-      // Should only contain URL-safe characters
-      expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
+      // Should only contain hex characters
+      expect(token).toMatch(/^[0-9a-f]{5}$/);
     });
   });
 
@@ -39,17 +39,29 @@ describe("Authentication", () => {
       expect(validateDisplayToken(token)).toBe(true);
     });
 
+    it("should validate 5-character hex tokens", () => {
+      expect(validateDisplayToken("a1b2c")).toBe(true);
+      expect(validateDisplayToken("00000")).toBe(true);
+      expect(validateDisplayToken("fffff")).toBe(true);
+    });
+
     it("should reject empty tokens", () => {
       expect(validateDisplayToken("")).toBe(false);
     });
 
     it("should reject tokens that are too short", () => {
-      expect(validateDisplayToken("short")).toBe(false);
+      expect(validateDisplayToken("abc")).toBe(false);
+    });
+
+    it("should reject tokens that are too long", () => {
+      expect(validateDisplayToken("abcdef")).toBe(false);
     });
 
     it("should reject tokens with invalid characters", () => {
-      expect(validateDisplayToken("invalid token with spaces")).toBe(false);
-      expect(validateDisplayToken("invalid@token#chars")).toBe(false);
+      expect(validateDisplayToken("abcde")).toBe(true); // valid
+      expect(validateDisplayToken("abcdg")).toBe(false); // 'g' is not hex
+      expect(validateDisplayToken("ABCDE")).toBe(false); // uppercase not allowed
+      expect(validateDisplayToken("abc e")).toBe(false); // space not allowed
     });
 
     it("should reject null or undefined tokens", () => {

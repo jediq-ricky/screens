@@ -10,7 +10,7 @@ describe("Display Client Integration Tests", () => {
       const display = await testPrisma.display.create({
         data: {
           name: "Test Display",
-          token: "abcdefghijklmnopqrstuvwxyz123456", // Exactly 32 characters
+          token: "a1b2c", // 5-character hex token
         },
       });
 
@@ -21,7 +21,7 @@ describe("Display Client Integration Tests", () => {
       const display = await testPrisma.display.create({
         data: {
           name: "Test Display",
-          token: "validtoken1234567890123456789012",
+          token: "12345",
         },
       });
 

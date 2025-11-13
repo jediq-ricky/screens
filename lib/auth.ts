@@ -2,17 +2,18 @@ import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 
 /**
- * Generate a unique, URL-safe token for display authentication
- * Uses nanoid for cryptographically strong random tokens
+ * Generate a unique, short token for display authentication
+ * Uses 5 random hex characters for easy manual entry
  */
 export function generateDisplayToken(): string {
-  // Generate a 32-character URL-safe token
-  return nanoid(32);
+  // Generate a random 5-character hex string
+  const bytes = Math.floor(Math.random() * 0xFFFFF);
+  return bytes.toString(16).padStart(5, '0');
 }
 
 /**
  * Validate a display token format
- * Ensures token is properly formatted and of sufficient length
+ * Ensures token is properly formatted (5 hex characters)
  */
 export function validateDisplayToken(token: any): boolean {
   // Check if token exists and is a string
@@ -20,14 +21,14 @@ export function validateDisplayToken(token: any): boolean {
     return false;
   }
 
-  // Check minimum length (32 characters)
-  if (token.length < 32) {
+  // Check length (5 characters)
+  if (token.length !== 5) {
     return false;
   }
 
-  // Check if token contains only URL-safe characters (alphanumeric, -, _)
-  const urlSafeRegex = /^[A-Za-z0-9_-]+$/;
-  return urlSafeRegex.test(token);
+  // Check if token contains only hex characters (0-9, a-f)
+  const hexRegex = /^[0-9a-f]{5}$/;
+  return hexRegex.test(token);
 }
 
 /**
