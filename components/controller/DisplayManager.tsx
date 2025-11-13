@@ -16,9 +16,10 @@ type DisplayWithPlaylist = Display & {
 
 interface DisplayManagerProps {
   initialDisplays: DisplayWithPlaylist[];
+  availablePlaylists: Playlist[];
 }
 
-export default function DisplayManager({ initialDisplays }: DisplayManagerProps) {
+export default function DisplayManager({ initialDisplays, availablePlaylists }: DisplayManagerProps) {
   const [displays, setDisplays] = useState(initialDisplays);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState("");
@@ -72,6 +73,41 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
       setDisplays(displays.filter((d) => d.id !== displayId));
     } catch (error) {
       alert("Failed to delete display. Please try again.");
+    }
+  };
+
+  const handlePlaylistChange = async (displayId: string, playlistId: string) => {
+    try {
+      const response = await fetch(`/api/displays/${displayId}/playlist`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playlistId: playlistId || null }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update playlist");
+      }
+
+      // Update local state
+      setDisplays(displays.map(d => {
+        if (d.id === displayId) {
+          if (!playlistId) {
+            return { ...d, playlists: [] };
+          }
+          const playlist = availablePlaylists.find(p => p.id === playlistId);
+          if (playlist) {
+            return {
+              ...d,
+              playlists: [{
+                playlist: { ...playlist, items: [] }
+              }]
+            };
+          }
+        }
+        return d;
+      }));
+    } catch (error) {
+      alert("Failed to update playlist. Please try again.");
     }
   };
 
@@ -185,11 +221,29 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
                   </p>
                 </div>
 
+                {/* Playlist Selector */}
+                <div className="text-sm mb-2">
+                  <label htmlFor={`playlist-${display.id}`} className="block text-gray-700 font-medium mb-1">
+                    Current Playlist:
+                  </label>
+                  <select
+                    id={`playlist-${display.id}`}
+                    value={display.playlists[0]?.playlist.id || ""}
+                    onChange={(e) => handlePlaylistChange(display.id, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">No Playlist</option>
+                    {availablePlaylists.map((playlist) => (
+                      <option key={playlist.id} value={playlist.id}>
+                        {playlist.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {display.playlists.length > 0 && (
-                  <div className="text-sm">
-                    <span className="text-gray-500">
-                      Playlist: {display.playlists[0].playlist.name} ({display.playlists[0].playlist.items.length} videos)
-                    </span>
+                  <div className="text-sm text-gray-500 mb-2">
+                    {display.playlists[0].playlist.items.length} video{display.playlists[0].playlist.items.length !== 1 ? 's' : ''}
                   </div>
                 )}
 
@@ -199,13 +253,15 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Link
-                    href={`/controller/displays/${display.id}/playlist`}
-                    className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    {display.playlists.length > 0 ? "Configure Playlist" : "Create Playlist"}
-                  </Link>
+                <div className="space-y-2 mt-4">
+                  {display.playlists.length > 0 && (
+                    <Link
+                      href={`/controller/playlists/${display.playlists[0].playlist.id}`}
+                      className="block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Configure Playlist
+                    </Link>
+                  )}
                   <button
                     onClick={() => handleDelete(display.id, display.name)}
                     className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
