@@ -1,4 +1,5 @@
 import { prisma } from "../lib/db";
+import { deleteVideo } from "../lib/storage";
 
 async function globalTeardown() {
 
@@ -71,11 +72,15 @@ async function globalTeardown() {
         where: { videoId: video.id },
       });
 
-      // Delete video file from storage if it exists
-      // Note: We don't actually delete from filesystem in tests
-      // as the files are typically test fixtures
+      // Delete video file from storage
+      try {
+        await deleteVideo(video.blobUrl);
+      } catch (error) {
+        console.error(`Failed to delete video file for ${video.title}:`, error);
+        // Continue even if file deletion fails
+      }
 
-      // Delete video
+      // Delete video from database
       await prisma.video.delete({
         where: { id: video.id },
       });

@@ -122,6 +122,23 @@ export default function DisplayClient({ display }: DisplayClientProps) {
     }
   }, [currentVideoIndex, hasVideos]);
 
+  // Track actual video play/pause state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Status Bar */}
