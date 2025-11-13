@@ -16,7 +16,8 @@ interface DisplayClientProps {
   display: DisplayWithPlaylist;
 }
 
-export default function DisplayClient({ display }: DisplayClientProps) {
+export default function DisplayClient({ display: initialDisplay }: DisplayClientProps) {
+  const [display, setDisplay] = useState(initialDisplay);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -65,6 +66,53 @@ export default function DisplayClient({ display }: DisplayClientProps) {
     addEventListener("control", handleControl);
     return () => removeEventListener("control", handleControl);
   }, [addEventListener, removeEventListener, videos.length]);
+
+  // Listen for playlist updates
+  useEffect(() => {
+    const handlePlaylistUpdate = async (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("Playlist updated, fetching new data...", data);
+
+        const previousVideoCount = videos.length;
+
+        // Fetch updated playlist data
+        const response = await fetch(`/api/displays/${display.id}/playlist/data`);
+        if (response.ok) {
+          const { playlist } = await response.json();
+          const newVideoCount = playlist?.items?.length || 0;
+
+          console.log("Previous video count:", previousVideoCount, "New video count:", newVideoCount);
+
+          setDisplay((prev) => ({ ...prev, playlist }));
+
+          // Reset to first video if current index is out of bounds
+          setCurrentVideoIndex((prevIndex) => {
+            return prevIndex >= newVideoCount ? 0 : prevIndex;
+          });
+
+          // If we went from no videos to having videos, trigger play
+          if (previousVideoCount === 0 && newVideoCount > 0) {
+            console.log("First video added, will auto-play in 500ms");
+            // Wait for video element to mount
+            setTimeout(() => {
+              console.log("Attempting to play video, ref exists:", !!videoRef.current);
+              if (videoRef.current) {
+                videoRef.current.play().catch((error) => {
+                  console.error("Error auto-playing after playlist update:", error);
+                });
+              }
+            }, 500);
+          }
+        }
+      } catch (error) {
+        console.error("Error handling playlist update:", error);
+      }
+    };
+
+    addEventListener("playlist-updated", handlePlaylistUpdate);
+    return () => removeEventListener("playlist-updated", handlePlaylistUpdate);
+  }, [addEventListener, removeEventListener, display.id, videos.length]);
 
   // Send playback status updates
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { sseManager } from "@/lib/sse";
 
 export async function POST(
   request: NextRequest,
@@ -71,6 +72,16 @@ export async function POST(
         position: maxPosition + 1,
       },
     });
+
+    // Notify all displays using this playlist to reload
+    const displays = await prisma.displayPlaylist.findMany({
+      where: { playlistId: id },
+      select: { displayId: true },
+    });
+
+    for (const { displayId } of displays) {
+      sseManager.sendToDisplay(displayId, "playlist-updated", { playlistId: id });
+    }
 
     return NextResponse.json(playlistItem, { status: 201 });
   } catch (error) {

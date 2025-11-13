@@ -6,15 +6,18 @@ import path from "path";
 
 describe("Video Storage", () => {
   const uploadDir = path.join(process.cwd(), "public", "uploads", "videos");
+  const testFiles: string[] = [];
 
   afterEach(async () => {
-    // Clean up test files
-    if (existsSync(uploadDir)) {
-      const files = await readdir(uploadDir);
-      await Promise.all(
-        files.map((file) => unlink(path.join(uploadDir, file)))
-      );
+    // Clean up only test files created during this test
+    for (const file of testFiles) {
+      try {
+        await unlink(path.join(uploadDir, file));
+      } catch (error) {
+        // Ignore if file doesn't exist
+      }
     }
+    testFiles.length = 0;
   });
 
   describe("uploadVideo", () => {
@@ -27,6 +30,7 @@ describe("Video Storage", () => {
 
       // Verify file was written
       const filename = result.url.split("/").pop()!;
+      testFiles.push(filename);
       expect(existsSync(path.join(uploadDir, filename))).toBe(true);
     });
 
@@ -34,6 +38,8 @@ describe("Video Storage", () => {
       const mockBuffer = Buffer.from("test");
       const result = await uploadVideo(mockBuffer, "test file (1).mp4");
 
+      const filename = result.url.split("/").pop()!;
+      testFiles.push(filename);
       expect(result.url).toMatch(/^\/uploads\/videos\/\d+-[a-z0-9]+-test_file__1_\.mp4$/);
     });
 
@@ -43,10 +49,13 @@ describe("Video Storage", () => {
       const result1 = await uploadVideo(mockBuffer, "test.mp4");
       const result2 = await uploadVideo(mockBuffer, "test.mp4");
 
+      testFiles.push(result1.url.split("/").pop()!);
+      testFiles.push(result2.url.split("/").pop()!);
+
       expect(result1.url).not.toBe(result2.url);
 
       const files = await readdir(uploadDir);
-      expect(files).toHaveLength(2);
+      expect(files.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -55,17 +64,21 @@ describe("Video Storage", () => {
       // First upload a file
       const mockBuffer = Buffer.from("test content");
       const { url } = await uploadVideo(mockBuffer, "test.mp4");
+      const filename = url.split("/").pop()!;
+      testFiles.push(filename);
 
       // Verify file exists
-      let files = await readdir(uploadDir);
-      expect(files).toHaveLength(1);
+      expect(existsSync(path.join(uploadDir, filename))).toBe(true);
 
       // Delete the file
       await deleteVideo(url);
 
       // Verify file was deleted
-      files = await readdir(uploadDir);
-      expect(files).toHaveLength(0);
+      expect(existsSync(path.join(uploadDir, filename))).toBe(false);
+
+      // Remove from testFiles since it's already deleted
+      const index = testFiles.indexOf(filename);
+      if (index > -1) testFiles.splice(index, 1);
     });
 
     it("should not throw error if file does not exist", async () => {

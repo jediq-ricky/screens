@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { sseManager } from "@/lib/sse";
 
 export async function DELETE(
   request: NextRequest,
@@ -23,6 +24,16 @@ export async function DELETE(
     await prisma.playlistItem.delete({
       where: { id: itemId },
     });
+
+    // Notify all displays using this playlist to reload
+    const displays = await prisma.displayPlaylist.findMany({
+      where: { playlistId: id },
+      select: { displayId: true },
+    });
+
+    for (const { displayId } of displays) {
+      sseManager.sendToDisplay(displayId, "playlist-updated", { playlistId: id });
+    }
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
