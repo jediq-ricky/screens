@@ -62,6 +62,17 @@ When working on this project:
 - Run `npm run test -- --run` before every commit to verify all tests pass
 - Test failures block all commits - no exceptions
 
+### E2E Test Cleanup
+**CRITICAL**: E2E tests MUST clean up all test data automatically.
+- All E2E test data (displays, playlists, videos) MUST use the "E2E" prefix in their names
+- Playwright global teardown automatically cleans up all data with "E2E" prefix
+- Global teardown runs after ALL tests complete, regardless of pass/fail/timeout
+- Never use try-finally blocks or afterAll hooks for cleanup - they fail when tests timeout
+- Test naming convention: `E2E Test ${Date.now()}`, `E2E Playlist ${Date.now()}`, etc.
+- Global teardown is configured in [playwright.config.ts](playwright.config.ts)
+- Cleanup implementation is in [e2e/global-teardown.ts](e2e/global-teardown.ts)
+- This ensures zero leftover test data even when tests fail or timeout
+
 ## Git Commit Guidelines
 When creating git commits:
 - Write clear, concise commit messages that describe the changes

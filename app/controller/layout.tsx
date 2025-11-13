@@ -19,6 +19,12 @@ export default function ControllerLayout({
               </Link>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link
+                  href="/controller/monitor"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-gray-700"
+                >
+                  Monitor
+                </Link>
+                <Link
                   href="/controller/videos"
                   className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-gray-700"
                 >

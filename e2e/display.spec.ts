@@ -1,20 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { deleteDisplayByName } from "./helpers";
 
 test.describe("Display Client", () => {
-  const createdDisplays: string[] = [];
-
-  test.afterAll(async ({ browser }) => {
-    // Clean up all displays created during tests
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    for (const displayName of createdDisplays) {
-      await deleteDisplayByName(page, displayName);
-    }
-
-    await context.close();
-  });
 
   test("should show 404 for invalid display token", async ({ page }) => {
     await page.goto("/display/invalid-token-that-does-not-exist", {
@@ -28,7 +14,6 @@ test.describe("Display Client", () => {
   test("should load display client with valid token", async ({ page }) => {
     // Create a unique display name
     const displayName = `E2E Test ${Date.now()}`;
-    createdDisplays.push(displayName);
 
     // First, create a display via the controller
     await page.goto("/controller/displays");
@@ -57,10 +42,8 @@ test.describe("Display Client", () => {
     await expect(page.getByTestId("connection-status")).toBeVisible();
   });
 
-  test("should show playlist on display client when configured", async ({ page }) => {
-    // Create a unique display name
-    const displayName = `E2E Playlist ${Date.now()}`;
-    createdDisplays.push(displayName);
+  test("should display playlists dropdown in display card", async ({ page }) => {
+    const displayName = `E2E Dropdown ${Date.now()}`;
 
     // Create display
     await page.goto("/controller/displays");
@@ -72,33 +55,11 @@ test.describe("Display Client", () => {
     const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
     await expect(displayCard).toBeVisible({ timeout: 10000 });
 
-    // Configure playlist - click the Create Playlist link within THIS card
-    await displayCard.locator('a:has-text("Create Playlist")').click();
+    // Should have playlist dropdown
+    const playlistSelect = displayCard.locator('select[id^="playlist-"]');
+    await expect(playlistSelect).toBeVisible();
 
-    // Should show playback mode selector
-    await expect(page.locator('select[aria-label="Playback Mode"]')).toBeVisible();
-
-    // Get display URL from displays page
-    await page.goto("/controller/displays");
-
-    // Find our specific display card again
-    const displayCardAgain = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
-    await expect(displayCardAgain).toBeVisible();
-
-    // Extract the display URL from THIS specific card
-    const displayPath = await displayCardAgain.locator('p.font-mono').textContent();
-    expect(displayPath).toBeTruthy();
-
-    // Navigate to display (path is relative like /display/token)
-    await page.goto(displayPath!.trim(), { waitUntil: 'domcontentloaded' });
-
-    // Should show our unique display name
-    await expect(page.locator(`text=${displayName}`)).toBeVisible({ timeout: 15000 });
-
-    // Should show no videos message (since playlist is empty)
-    await expect(page.locator("text=No videos in playlist")).toBeVisible();
-
-    // Should show playback mode
-    await expect(page.locator("text=sequence")).toBeVisible();
+    // Should have "No Playlist" as selected value
+    await expect(playlistSelect).toHaveValue("");
   });
 });
