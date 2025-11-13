@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
+import { useSSE } from "@/lib/hooks/useSSE";
 
 type DisplayWithPlaylist = Display & {
   playlist: (Playlist & {
@@ -16,21 +17,101 @@ interface DisplayClientProps {
 }
 
 export default function DisplayClient({ display }: DisplayClientProps) {
-  const [isConnected, setIsConnected] = useState(true);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const videos = display.playlist?.items.map((item) => item.video) || [];
   const hasVideos = videos.length > 0;
   const playbackMode = display.playlist?.playbackMode;
 
-  // Simulate connection status check
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsConnected(navigator.onLine);
-    }, 5000);
+  // Connect to SSE for real-time updates
+  const { isConnected, addEventListener, removeEventListener } = useSSE({
+    url: `/api/sse?displayId=${display.id}`,
+    onMessage: (event) => {
+      console.log("SSE message:", event.data);
+    },
+    onError: (error) => {
+      console.error("SSE error:", error);
+    },
+    reconnect: true,
+    reconnectInterval: 5000,
+  });
 
+  // Listen for control commands
+  useEffect(() => {
+    const handleControl = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.command === "play" && videoRef.current) {
+          videoRef.current.play();
+          setIsPlaying(true);
+        } else if (data.command === "pause" && videoRef.current) {
+          videoRef.current.pause();
+          setIsPlaying(false);
+        } else if (data.command === "next") {
+          handleNext();
+        } else if (data.command === "previous") {
+          handlePrevious();
+        } else if (data.command === "skip" && typeof data.index === "number") {
+          setCurrentVideoIndex(data.index);
+        }
+      } catch (error) {
+        console.error("Error handling control command:", error);
+      }
+    };
+
+    addEventListener("control", handleControl);
+    return () => removeEventListener("control", handleControl);
+  }, [addEventListener, removeEventListener, videos.length]);
+
+  // Send playback status updates
+  useEffect(() => {
+    if (!hasVideos) return;
+
+    const sendStatus = async () => {
+      try {
+        await fetch(`/api/displays/${display.id}/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentVideoIndex,
+            currentVideoId: videos[currentVideoIndex]?.id,
+            isPlaying,
+            timestamp: new Date().toISOString(),
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to send status update:", error);
+      }
+    };
+
+    // Send initial status
+    sendStatus();
+
+    // Send status every 10 seconds
+    const interval = setInterval(sendStatus, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [display.id, currentVideoIndex, isPlaying, hasVideos, videos]);
+
+  const handleNext = () => {
+    if (playbackMode === "SEQUENCE") {
+      if (currentVideoIndex < videos.length - 1) {
+        setCurrentVideoIndex(currentVideoIndex + 1);
+      }
+    } else if (playbackMode === "LOOP") {
+      setCurrentVideoIndex((currentVideoIndex + 1) % videos.length);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentVideoIndex > 0) {
+      setCurrentVideoIndex(currentVideoIndex - 1);
+    } else if (playbackMode === "LOOP") {
+      setCurrentVideoIndex(videos.length - 1);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -111,6 +192,7 @@ export default function DisplayClient({ display }: DisplayClientProps) {
         ) : (
           <div className="w-full h-screen">
             <video
+              ref={videoRef}
               key={videos[currentVideoIndex].id}
               className="w-full h-full object-contain"
               src={videos[currentVideoIndex].blobUrl}
@@ -118,15 +200,9 @@ export default function DisplayClient({ display }: DisplayClientProps) {
               muted
               playsInline
               data-testid="video-player"
-              onEnded={() => {
-                if (playbackMode === "SEQUENCE") {
-                  if (currentVideoIndex < videos.length - 1) {
-                    setCurrentVideoIndex(currentVideoIndex + 1);
-                  }
-                } else if (playbackMode === "LOOP") {
-                  setCurrentVideoIndex((currentVideoIndex + 1) % videos.length);
-                }
-              }}
+              onEnded={handleNext}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
             >
               <source
                 src={videos[currentVideoIndex].blobUrl}

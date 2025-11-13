@@ -1,7 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@/lib/test-utils";
 import DisplayClient from "@/components/display/DisplayClient";
 import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
+
+// Mock the useSSE hook
+vi.mock("@/lib/hooks/useSSE", () => ({
+  useSSE: vi.fn(() => ({
+    isConnected: true,
+    disconnect: vi.fn(),
+    reconnect: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })),
+}));
 
 type DisplayWithPlaylist = Display & {
   playlist: (Playlist & {
@@ -12,6 +23,16 @@ type DisplayWithPlaylist = Display & {
 };
 
 describe("DisplayClient", () => {
+  beforeEach(() => {
+    // Mock fetch for status updates
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      } as Response)
+    );
+  });
+
   const mockVideos: Video[] = [
     {
       id: "video-1",
@@ -51,6 +72,8 @@ describe("DisplayClient", () => {
     playlist: {
       id: "playlist-1",
       displayId: "display-1",
+      name: "Test Playlist",
+      description: null,
       playbackMode: "SEQUENCE",
       isActive: true,
       createdAt: new Date(),

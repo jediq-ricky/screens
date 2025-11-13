@@ -31,7 +31,7 @@ test.describe("Display Client", () => {
       expect(displayPath).toBeTruthy();
 
       // Navigate to the display URL (path is relative like /display/token)
-      await page.goto(displayPath!.trim(), { waitUntil: 'networkidle' });
+      await page.goto(displayPath!.trim(), { waitUntil: 'domcontentloaded' });
 
       // Should show the display client with our unique display name
       await expect(page.locator(`text=${displayName}`)).toBeVisible({ timeout: 15000 });
@@ -80,7 +80,7 @@ test.describe("Display Client", () => {
       expect(displayPath).toBeTruthy();
 
       // Navigate to display (path is relative like /display/token)
-      await page.goto(displayPath!.trim(), { waitUntil: 'networkidle' });
+      await page.goto(displayPath!.trim(), { waitUntil: 'domcontentloaded' });
 
       // Should show our unique display name
       await expect(page.locator(`text=${displayName}`)).toBeVisible({ timeout: 15000 });
