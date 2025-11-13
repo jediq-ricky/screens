@@ -18,14 +18,8 @@ test.describe("Playlist Configuration", () => {
       const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
       await expect(displayCard).toBeVisible({ timeout: 10000 });
 
-      // Click configure playlist within THIS card
-      await displayCard.locator('a:has-text("Configure Playlist")').click();
-
-      // Should show no playlist message
-      await expect(page.locator("text=No playlist configured")).toBeVisible();
-
-      // Create playlist
-      await page.click('button:has-text("Create Playlist")');
+      // Click create playlist within THIS card
+      await displayCard.locator('a:has-text("Create Playlist")').click();
 
       // Should show playlist controls
       await expect(page.locator('select[aria-label="Playback Mode"]')).toBeVisible();
@@ -42,16 +36,15 @@ test.describe("Playlist Configuration", () => {
     await page.goto("/controller/displays");
 
     // Use the first display if it exists, or create one
-    const configureButton = page.locator('a:has-text("Configure Playlist")').first();
-    if (await configureButton.count() > 0) {
-      await configureButton.click();
+    const playlistLink = page.locator('a:has-text("Playlist")').first();
+    if (await playlistLink.count() > 0) {
+      await playlistLink.click();
     } else {
       // Create a display
       await page.click('button:has-text("+ New Display")');
       await page.fill('input[placeholder*="Lobby Display"]', "Test Display");
       await page.click('button:has-text("Create Display")');
-      await page.click('a:has-text("Configure Playlist")');
-      await page.click('button:has-text("Create Playlist")');
+      await page.click('a:has-text("Playlist")');
     }
 
     // Check playback mode options

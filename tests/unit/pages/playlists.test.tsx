@@ -16,42 +16,62 @@ import { prisma } from "@/lib/db";
 const mockPlaylists = [
   {
     id: "p1",
-    displayId: "1",
+    name: "Playlist 1",
+    description: "Test playlist 1",
     playbackMode: "LOOP",
     isActive: true,
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
-    display: {
-      id: "1",
-      name: "Display 1",
-      description: "Test display 1",
-      token: "token123",
-      isActive: true,
-      lastSeenAt: null,
-      createdAt: new Date("2024-01-01"),
-      updatedAt: new Date("2024-01-01"),
-    },
+    displays: [
+      {
+        id: "dp1",
+        displayId: "1",
+        playlistId: "p1",
+        createdAt: new Date("2024-01-01"),
+        updatedAt: new Date("2024-01-01"),
+        display: {
+          id: "1",
+          name: "Display 1",
+          description: "Test display 1",
+          token: "token123",
+          isActive: true,
+          lastSeenAt: null,
+          createdAt: new Date("2024-01-01"),
+          updatedAt: new Date("2024-01-01"),
+        },
+      },
+    ],
     _count: {
       items: 5,
     },
   },
   {
     id: "p2",
-    displayId: "2",
+    name: "Playlist 2",
+    description: null,
     playbackMode: "SEQUENCE",
     isActive: false,
     createdAt: new Date("2024-01-02"),
     updatedAt: new Date("2024-01-02"),
-    display: {
-      id: "2",
-      name: "Display 2",
-      description: null,
-      token: "token456",
-      isActive: false,
-      lastSeenAt: null,
-      createdAt: new Date("2024-01-02"),
-      updatedAt: new Date("2024-01-02"),
-    },
+    displays: [
+      {
+        id: "dp2",
+        displayId: "2",
+        playlistId: "p2",
+        createdAt: new Date("2024-01-02"),
+        updatedAt: new Date("2024-01-02"),
+        display: {
+          id: "2",
+          name: "Display 2",
+          description: null,
+          token: "token456",
+          isActive: false,
+          lastSeenAt: null,
+          createdAt: new Date("2024-01-02"),
+          updatedAt: new Date("2024-01-02"),
+        },
+      },
+    ],
     _count: {
       items: 0,
     },
@@ -68,14 +88,14 @@ describe("PlaylistsPage Component", () => {
     expect(screen.getByText("Playlists")).toBeInTheDocument();
   });
 
-  it("should render playlists with display names", async () => {
+  it("should render playlists with names", async () => {
     vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    expect(screen.getByText("Display 1")).toBeInTheDocument();
-    expect(screen.getByText("Display 2")).toBeInTheDocument();
+    expect(screen.getByText("Playlist 1")).toBeInTheDocument();
+    expect(screen.getByText("Playlist 2")).toBeInTheDocument();
   });
 
   it("should show playlist details", async () => {
@@ -120,13 +140,13 @@ describe("PlaylistsPage Component", () => {
     expect(screen.getByText("Go to Displays")).toBeInTheDocument();
   });
 
-  it("should render display descriptions when available", async () => {
+  it("should render playlist descriptions when available", async () => {
     vi.mocked(prisma.playlist.findMany).mockResolvedValue(mockPlaylists);
 
     const Page = await PlaylistsPage();
     render(Page);
 
-    expect(screen.getByText("Test display 1")).toBeInTheDocument();
+    expect(screen.getByText("Test playlist 1")).toBeInTheDocument();
   });
 
   it("should render correct links to edit playlists", async () => {
@@ -136,7 +156,7 @@ describe("PlaylistsPage Component", () => {
     render(Page);
 
     const editLink = screen.getByText("Edit Playlist").closest("a");
-    expect(editLink).toHaveAttribute("href", "/controller/playlists/1");
+    expect(editLink).toHaveAttribute("href", "/controller/playlists/p1");
   });
 
   it("should show active status badge for active playlists", async () => {

@@ -8,7 +8,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { playbackMode, isActive } = body;
+    const { playbackMode, isActive, name, description } = body;
 
     // Validate playback mode if provided
     if (playbackMode) {
@@ -33,9 +33,17 @@ export async function PATCH(
       );
     }
 
-    const updateData: { playbackMode?: string; isActive?: boolean } = {};
+    const updateData: {
+      playbackMode?: string;
+      isActive?: boolean;
+      name?: string;
+      description?: string | null;
+    } = {};
+
     if (playbackMode) updateData.playbackMode = playbackMode;
     if (typeof isActive === "boolean") updateData.isActive = isActive;
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
 
     const playlist = await prisma.playlist.update({
       where: { id },

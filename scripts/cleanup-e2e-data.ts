@@ -16,6 +16,19 @@ async function cleanupE2EData() {
 
   console.log(`Deleted ${deletedDisplays.count} test displays`);
 
+  // Delete orphaned playlists that start with "E2E" or test-related names
+  const deletedPlaylists = await prisma.playlist.deleteMany({
+    where: {
+      OR: [
+        { name: { startsWith: "E2E" } },
+        { name: { startsWith: "Test" } },
+        { name: { contains: "Playlist Test" } },
+      ],
+    },
+  });
+
+  console.log(`Deleted ${deletedPlaylists.count} test playlists`);
+
   // Delete all videos that start with "E2E" or test-related names
   const deletedVideos = await prisma.video.deleteMany({
     where: {

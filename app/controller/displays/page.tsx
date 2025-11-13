@@ -5,11 +5,15 @@ export default async function DisplaysPage() {
   const displays = await prisma.display.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      playlist: {
+      playlists: {
         include: {
-          items: {
+          playlist: {
             include: {
-              video: true,
+              items: {
+                include: {
+                  video: true,
+                },
+              },
             },
           },
         },

@@ -42,26 +42,48 @@ model Display {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  playlist Playlist?
+  playlist Playlist? // Legacy 1:1 relationship (will be removed)
+  playlists DisplayPlaylist[]
 
   @@index([token])
   @@index([isActive, lastSeenAt])
 }
 
-// Playlist assigned to a display
+// Playlist that can be assigned to multiple displays
 model Playlist {
   id           String       @id @default(cuid())
-  displayId    String       @unique
+  displayId    String?      @unique // Legacy field (will be removed)
+  name         String       @default("")
+  description  String?
   playbackMode PlaybackMode @default(SEQUENCE)
   isActive     Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   // Relations
-  display Display        @relation(fields: [displayId], references: [id], onDelete: Cascade)
-  items   PlaylistItem[]
+  display  Display?          @relation(fields: [displayId], references: [id], onDelete: Cascade) // Legacy (will be removed)
+  displays DisplayPlaylist[]
+  items    PlaylistItem[]
 
   @@index([displayId])
+  @@index([name])
+}
+
+// Many-to-many relationship between displays and playlists
+model DisplayPlaylist {
+  id         String   @id @default(cuid())
+  displayId  String
+  playlistId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  display  Display  @relation(fields: [displayId], references: [id], onDelete: Cascade)
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@unique([displayId, playlistId]) // A playlist can only be assigned once to a display
+  @@index([displayId])
+  @@index([playlistId])
 }
 
 // Individual videos in a playlist with ordering

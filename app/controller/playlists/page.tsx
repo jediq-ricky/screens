@@ -4,7 +4,11 @@ import Link from "next/link";
 export default async function PlaylistsPage() {
   const playlists = await prisma.playlist.findMany({
     include: {
-      display: true,
+      displays: {
+        include: {
+          display: true,
+        },
+      },
       _count: {
         select: { items: true },
       },
@@ -40,11 +44,11 @@ export default async function PlaylistsPage() {
             >
               <div className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {playlist.display.name}
+                  {playlist.name}
                 </h3>
-                {playlist.display.description && (
+                {playlist.description && (
                   <p className="text-sm text-gray-600 mb-4">
-                    {playlist.display.description}
+                    {playlist.description}
                   </p>
                 )}
 
@@ -56,6 +60,14 @@ export default async function PlaylistsPage() {
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">Videos:</span>{" "}
                     {playlist._count.items}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Assigned to:</span>{" "}
+                    {playlist.displays.length === 0
+                      ? "No displays"
+                      : playlist.displays.length === 1
+                      ? playlist.displays[0].display.name
+                      : `${playlist.displays.length} displays`}
                   </div>
                   <div className="text-sm">
                     <span
@@ -71,7 +83,7 @@ export default async function PlaylistsPage() {
                 </div>
 
                 <Link
-                  href={`/controller/playlists/${playlist.displayId}`}
+                  href={`/controller/playlists/${playlist.id}`}
                   className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                 >
                   Edit Playlist

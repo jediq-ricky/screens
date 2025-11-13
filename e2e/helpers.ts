@@ -4,37 +4,67 @@ import { Page } from "@playwright/test";
  * Delete a display by name from the displays page
  */
 export async function deleteDisplayByName(page: Page, displayName: string) {
-  await page.goto("/controller/displays");
+  try {
+    await page.goto("/controller/displays", { timeout: 10000 });
 
-  // Find the display card with this name
-  const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
+    // Find the display card with this name
+    const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
 
-  // Check if it exists
-  if (await displayCard.count() === 0) {
-    return; // Display doesn't exist, nothing to delete
+    // Check if it exists
+    if (await displayCard.count() === 0) {
+      return; // Display doesn't exist, nothing to delete
+    }
+
+    // Extract the display ID from the playlist link (either Configure or Create Playlist)
+    const playlistLink = displayCard.locator('a:has-text("Playlist")').first();
+    const href = await playlistLink.getAttribute('href');
+
+    if (!href) {
+      return;
+    }
+
+    // Extract display ID from href like "/controller/displays/123/playlist"
+    const parts = href.split('/');
+    const displayId = parts[parts.length - 2]; // Get the ID before "playlist"
+
+    if (!displayId) {
+      return;
+    }
+
+    // Check if the display has a playlist by looking at the link text
+    const linkText = await playlistLink.textContent();
+
+    // If it's "Configure Playlist", the display has a playlist we need to delete
+    if (linkText?.includes('Configure')) {
+      // Navigate to the playlist page to get the playlist ID
+      const playlistPageUrl = await playlistLink.getAttribute('href');
+      if (playlistPageUrl) {
+        await page.goto(playlistPageUrl, { timeout: 10000 });
+        // Get the playlist ID from the current URL
+        const currentUrl = page.url();
+        const playlistIdMatch = currentUrl.match(/\/playlists\/([^\/]+)$/);
+        if (playlistIdMatch) {
+          const playlistId = playlistIdMatch[1];
+          // Delete the playlist via API
+          await page.evaluate(async (id) => {
+            await fetch(`/api/playlists/${id}`, {
+              method: 'DELETE',
+            });
+          }, playlistId);
+        }
+      }
+    }
+
+    // Delete the display via API
+    await page.evaluate(async (id) => {
+      await fetch(`/api/displays/${id}`, {
+        method: 'DELETE',
+      });
+    }, displayId);
+  } catch (error) {
+    // Ignore errors during cleanup
+    console.log(`Cleanup error for display "${displayName}":`, error);
   }
-
-  // Extract the display ID from the Configure Playlist link
-  const configureLink = displayCard.locator('a:has-text("Configure Playlist")');
-  const href = await configureLink.getAttribute('href');
-
-  if (!href) {
-    return;
-  }
-
-  // Extract display ID from href like "/controller/playlists/123"
-  const displayId = href.split('/').pop();
-
-  if (!displayId) {
-    return;
-  }
-
-  // Make API call to delete the display
-  await page.evaluate(async (id) => {
-    await fetch(`/api/displays/${id}`, {
-      method: 'DELETE',
-    });
-  }, displayId);
 }
 
 /**

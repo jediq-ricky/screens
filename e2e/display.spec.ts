@@ -62,9 +62,8 @@ test.describe("Display Client", () => {
       const displayCard = page.locator('.bg-white.rounded-lg.shadow').filter({ hasText: displayName });
       await expect(displayCard).toBeVisible({ timeout: 10000 });
 
-      // Configure playlist - click the Configure Playlist link within THIS card
-      await displayCard.locator('a:has-text("Configure Playlist")').click();
-      await page.click('button:has-text("Create Playlist")');
+      // Configure playlist - click the Create Playlist link within THIS card
+      await displayCard.locator('a:has-text("Create Playlist")').click();
 
       // Should show playback mode selector
       await expect(page.locator('select[aria-label="Playback Mode"]')).toBeVisible();

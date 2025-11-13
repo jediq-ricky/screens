@@ -15,14 +15,18 @@ export default async function DisplayPage({ params }: PageProps) {
   const display = await prisma.display.findUnique({
     where: { token },
     include: {
-      playlist: {
+      playlists: {
         include: {
-          items: {
+          playlist: {
             include: {
-              video: true,
-            },
-            orderBy: {
-              position: "asc",
+              items: {
+                include: {
+                  video: true,
+                },
+                orderBy: {
+                  position: "asc",
+                },
+              },
             },
           },
         },
@@ -40,5 +44,8 @@ export default async function DisplayPage({ params }: PageProps) {
     data: { lastSeenAt: new Date() },
   });
 
-  return <DisplayClient display={display} />;
+  // Get the playlist (first one if multiple assigned)
+  const playlist = display.playlists.length > 0 ? display.playlists[0].playlist : null;
+
+  return <DisplayClient display={{ ...display, playlist }} />;
 }

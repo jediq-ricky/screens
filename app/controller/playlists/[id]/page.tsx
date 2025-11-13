@@ -11,25 +11,26 @@ interface PageProps {
 export default async function PlaylistPage({ params }: PageProps) {
   const { id } = await params;
 
-  const display = await prisma.display.findUnique({
+  const playlist = await prisma.playlist.findUnique({
     where: { id },
     include: {
-      playlist: {
+      items: {
         include: {
-          items: {
-            include: {
-              video: true,
-            },
-            orderBy: {
-              position: "asc",
-            },
-          },
+          video: true,
+        },
+        orderBy: {
+          position: "asc",
+        },
+      },
+      displays: {
+        include: {
+          display: true,
         },
       },
     },
   });
 
-  if (!display) {
+  if (!playlist) {
     notFound();
   }
 
@@ -44,11 +45,11 @@ export default async function PlaylistPage({ params }: PageProps) {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Configure Playlist</h1>
         <p className="text-gray-600 mt-2">
-          Manage the playlist for {display.name}
+          Manage playlist: {playlist.name}
         </p>
       </div>
 
-      <PlaylistEditor display={display} availableVideos={videos} />
+      <PlaylistEditor playlist={playlist} availableVideos={videos} />
     </div>
   );
 }

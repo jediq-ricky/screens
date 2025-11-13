@@ -4,7 +4,11 @@ import DisplayManager from "@/components/controller/DisplayManager";
 import type { Display, Playlist } from "@/lib/generated/prisma";
 
 type DisplayWithPlaylist = Display & {
-  playlist: Playlist | null;
+  playlists: Array<{
+    playlist: Playlist & {
+      items: any[];
+    };
+  }>;
 };
 
 const mockDisplays: DisplayWithPlaylist[] = [
@@ -17,7 +21,7 @@ const mockDisplays: DisplayWithPlaylist[] = [
     lastSeenAt: new Date("2024-01-01"),
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
-    playlist: null,
+    playlists: [],
   },
   {
     id: "2",
@@ -28,7 +32,7 @@ const mockDisplays: DisplayWithPlaylist[] = [
     lastSeenAt: null,
     createdAt: new Date("2024-01-02"),
     updatedAt: new Date("2024-01-02"),
-    playlist: null,
+    playlists: [],
   },
 ];
 

@@ -1,51 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
+import type { Playlist, PlaylistItem, Video, DisplayPlaylist, Display } from "@/lib/generated/prisma";
 
-type DisplayWithPlaylist = Display & {
-  playlist: (Playlist & {
-    items: (PlaylistItem & {
-      video: Video;
-    })[];
-  }) | null;
+type PlaylistWithDetails = Playlist & {
+  items: (PlaylistItem & {
+    video: Video;
+  })[];
+  displays: (DisplayPlaylist & {
+    display: Display;
+  })[];
 };
 
 interface PlaylistEditorProps {
-  display: DisplayWithPlaylist;
+  playlist: PlaylistWithDetails;
   availableVideos: Video[];
 }
 
-export default function PlaylistEditor({ display, availableVideos }: PlaylistEditorProps) {
-  const [playlist, setPlaylist] = useState(display.playlist);
-  const [isCreating, setIsCreating] = useState(false);
+export default function PlaylistEditor({ playlist: initialPlaylist, availableVideos }: PlaylistEditorProps) {
+  const [playlist, setPlaylist] = useState(initialPlaylist);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(playlist.name);
 
-  const handleCreatePlaylist = async () => {
-    setIsCreating(true);
+  const handleUpdateName = async () => {
+    if (!editedName.trim() || editedName === playlist.name) {
+      setIsEditingName(false);
+      setEditedName(playlist.name);
+      return;
+    }
+
     try {
-      const response = await fetch("/api/playlists", {
-        method: "POST",
+      const response = await fetch(`/api/playlists/${playlist.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayId: display.id,
-          playbackMode: "SEQUENCE",
-        }),
+        body: JSON.stringify({ name: editedName }),
       });
 
       if (response.ok) {
-        const newPlaylist = await response.json();
-        setPlaylist({ ...newPlaylist, items: [] });
+        setPlaylist({ ...playlist, name: editedName });
+        setIsEditingName(false);
+      } else {
+        alert("Failed to update playlist name");
+        setEditedName(playlist.name);
       }
     } catch (error) {
-      console.error("Failed to create playlist:", error);
-    } finally {
-      setIsCreating(false);
+      console.error("Failed to update playlist name:", error);
+      alert("Failed to update playlist name");
+      setEditedName(playlist.name);
     }
   };
 
   const handleAddVideo = async (videoId: string) => {
-    if (!playlist) return;
-
     try {
       const response = await fetch(`/api/playlists/${playlist.id}/items`, {
         method: "POST",
@@ -59,7 +64,7 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
         if (video) {
           setPlaylist({
             ...playlist,
-            items: [...(playlist.items || []), { ...newItem, video }],
+            items: [...playlist.items, { ...newItem, video }],
           });
         }
       }
@@ -69,8 +74,6 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
   };
 
   const handleRemoveVideo = async (itemId: string) => {
-    if (!playlist) return;
-
     try {
       const response = await fetch(`/api/playlists/${playlist.id}/items/${itemId}`, {
         method: "DELETE",
@@ -88,8 +91,6 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
   };
 
   const handleChangePlaybackMode = async (mode: string) => {
-    if (!playlist) return;
-
     try {
       const response = await fetch(`/api/playlists/${playlist.id}`, {
         method: "PATCH",
@@ -107,8 +108,6 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
   };
 
   const handleDeletePlaylist = async () => {
-    if (!playlist) return;
-
     if (!confirm("Are you sure you want to delete this playlist? All playlist items will be removed.")) {
       return;
     }
@@ -122,105 +121,146 @@ export default function PlaylistEditor({ display, availableVideos }: PlaylistEdi
         throw new Error("Failed to delete playlist");
       }
 
-      // Reset playlist state
-      setPlaylist(null);
+      // Redirect to playlists list
+      window.location.href = "/controller/playlists";
     } catch (error) {
       alert("Failed to delete playlist. Please try again.");
     }
   };
 
-  const videoIdsInPlaylist = new Set(playlist?.items?.map((item) => item.videoId) || []);
+  const videoIdsInPlaylist = new Set(playlist.items.map((item) => item.videoId));
   const availableToAdd = availableVideos.filter((v) => !videoIdsInPlaylist.has(v.id));
 
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">{display.name}</h2>
-        {display.description && (
-          <p className="text-gray-600 mb-4">{display.description}</p>
+        {/* Playlist Name */}
+        <div className="mb-4">
+          {isEditingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleUpdateName();
+                  if (e.key === "Escape") {
+                    setIsEditingName(false);
+                    setEditedName(playlist.name);
+                  }
+                }}
+                className="flex-1 text-2xl font-bold text-gray-900 border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                autoFocus
+              />
+              <button
+                onClick={handleUpdateName}
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setIsEditingName(false);
+                  setEditedName(playlist.name);
+                }}
+                className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-gray-900">{playlist.name}</h2>
+              <button
+                onClick={() => setIsEditingName(true)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                Edit
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Assigned Displays */}
+        {playlist.displays.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Assigned to:</span>{" "}
+              {playlist.displays.map((dp) => dp.display.name).join(", ")}
+            </p>
+          </div>
         )}
 
-        {!playlist ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500 mb-4">No playlist configured for this display</p>
-            <button
-              onClick={handleCreatePlaylist}
-              disabled={isCreating}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isCreating ? "Creating..." : "Create Playlist"}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <label htmlFor="playback-mode" className="block text-sm font-medium text-gray-700 mb-2">
-                  Playback Mode
-                </label>
-                <select
-                  id="playback-mode"
-                  aria-label="Playback Mode"
-                  value={playlist.playbackMode}
-                  onChange={(e) => handleChangePlaybackMode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="SEQUENCE">Sequence</option>
-                  <option value="LOOP">Loop</option>
-                  <option value="MANUAL">Manual</option>
-                </select>
-              </div>
-              <div className="pt-7">
-                <button
-                  onClick={handleDeletePlaylist}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                >
-                  Delete Playlist
-                </button>
-              </div>
+        {/* Playback Mode and Delete */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 mr-4">
+              <label htmlFor="playback-mode" className="block text-sm font-medium text-gray-700 mb-2">
+                Playback Mode
+              </label>
+              <select
+                id="playback-mode"
+                aria-label="Playback Mode"
+                value={playlist.playbackMode}
+                onChange={(e) => handleChangePlaybackMode(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="SEQUENCE">Sequence</option>
+                <option value="LOOP">Loop</option>
+                <option value="MANUAL">Manual</option>
+              </select>
             </div>
+            <div className="pt-7">
+              <button
+                onClick={handleDeletePlaylist}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              >
+                Delete Playlist
+              </button>
+            </div>
+          </div>
 
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Playlist Items</h3>
-              {playlist.items.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">No videos in playlist</p>
-              ) : (
-                <div className="space-y-2">
-                  {playlist.items
-                    .sort((a, b) => a.position - b.position)
-                    .map((item, index) => (
-                      <div
-                        key={item.id}
-                        data-testid={`playlist-item-${index}`}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-500 w-8">
-                            {index + 1}.
-                          </span>
-                          <div>
-                            <p className="font-medium text-gray-900">{item.video.title}</p>
-                            {item.video.description && (
-                              <p className="text-sm text-gray-500">{item.video.description}</p>
-                            )}
-                          </div>
+          {/* Playlist Items */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Playlist Items</h3>
+            {playlist.items.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No videos in playlist</p>
+            ) : (
+              <div className="space-y-2">
+                {playlist.items
+                  .sort((a, b) => a.position - b.position)
+                  .map((item, index) => (
+                    <div
+                      key={item.id}
+                      data-testid={`playlist-item-${index}`}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-sm font-medium text-gray-500 w-8">
+                          {index + 1}.
+                        </span>
+                        <div>
+                          <p className="font-medium text-gray-900">{item.video.title}</p>
+                          {item.video.description && (
+                            <p className="text-sm text-gray-500">{item.video.description}</p>
+                          )}
                         </div>
-                        <button
-                          onClick={() => handleRemoveVideo(item.id)}
-                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-                        >
-                          Remove
-                        </button>
                       </div>
-                    ))}
-                </div>
-              )}
-            </div>
+                      <button
+                        onClick={() => handleRemoveVideo(item.id)}
+                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {playlist && availableToAdd.length > 0 && (
+      {availableToAdd.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Videos</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

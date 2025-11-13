@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@/lib/test-utils";
 import PlaylistEditor from "@/components/controller/PlaylistEditor";
-import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
+import type { Display, Playlist, PlaylistItem, Video, DisplayPlaylist } from "@/lib/generated/prisma";
 
 // Mock fetch
 global.fetch = vi.fn();
@@ -9,16 +9,17 @@ global.fetch = vi.fn();
 // Mock confirm
 global.confirm = vi.fn();
 
-type DisplayWithPlaylist = Display & {
-  playlist: (Playlist & {
-    items: (PlaylistItem & {
-      video: Video;
-    })[];
-  }) | null;
+type PlaylistWithDetails = Playlist & {
+  items: (PlaylistItem & {
+    video: Video;
+  })[];
+  displays: (DisplayPlaylist & {
+    display: Display;
+  })[];
 };
 
 describe("PlaylistEditor", () => {
-  const mockDisplayWithoutPlaylist: DisplayWithPlaylist = {
+  const mockDisplay: Display = {
     id: "display-1",
     name: "Test Display",
     token: "test-token-123",
@@ -27,7 +28,6 @@ describe("PlaylistEditor", () => {
     lastSeenAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    playlist: null,
   };
 
   const mockVideos: Video[] = [
@@ -57,124 +57,80 @@ describe("PlaylistEditor", () => {
     },
   ];
 
+  const mockPlaylist: PlaylistWithDetails = {
+    id: "playlist-1",
+    name: "Test Playlist",
+    description: null,
+    playbackMode: "SEQUENCE",
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    items: [],
+    displays: [
+      {
+        id: "dp-1",
+        displayId: mockDisplay.id,
+        playlistId: "playlist-1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        display: mockDisplay,
+      },
+    ],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render display info and empty playlist state", () => {
+  it("should render playlist name", () => {
     render(
       <PlaylistEditor
-        display={mockDisplayWithoutPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
 
-    expect(screen.getByText("Test Display")).toBeInTheDocument();
-    expect(screen.getByText(/no playlist configured/i)).toBeInTheDocument();
+    expect(screen.getByText("Test Playlist")).toBeInTheDocument();
   });
 
-  it("should show create playlist button when no playlist exists", () => {
+  it("should show edit button for playlist name", () => {
     render(
       <PlaylistEditor
-        display={mockDisplayWithoutPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
 
-    expect(screen.getByRole("button", { name: /create playlist/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /edit/i })).toBeInTheDocument();
   });
 
-  it("should create a new playlist when button is clicked", async () => {
-    const mockPlaylist = {
-      id: "playlist-1",
-      displayId: "display-1",
-      playbackMode: "SEQUENCE",
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockPlaylist,
-    });
-
-    const { user } = render(
-      <PlaylistEditor
-        display={mockDisplayWithoutPlaylist}
-        availableVideos={mockVideos}
-      />
-    );
-
-    const createButton = screen.getByRole("button", { name: /create playlist/i });
-    await user.click(createButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/playlists",
-        expect.objectContaining({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            displayId: "display-1",
-            playbackMode: "SEQUENCE",
-          }),
-        })
-      );
-    });
-  });
-
-  it("should render playlist with items", () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [
-          {
-            id: "item-1",
-            playlistId: "playlist-1",
-            videoId: "video-1",
-            position: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            video: mockVideos[0],
-          },
-        ],
-      },
-    };
-
+  it("should show assigned displays", () => {
     render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
 
-    expect(screen.getByText("Video 1")).toBeInTheDocument();
+    expect(screen.getByText(/assigned to:/i)).toBeInTheDocument();
+    expect(screen.getByText(/test display/i)).toBeInTheDocument();
+  });
+
+  it("should render empty playlist message when no items", () => {
+    render(
+      <PlaylistEditor
+        playlist={mockPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    expect(screen.getByText(/no videos in playlist/i)).toBeInTheDocument();
   });
 
   it("should display available videos to add", () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "LOOP",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [],
-      },
-    };
-
     render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -184,36 +140,21 @@ describe("PlaylistEditor", () => {
   });
 
   it("should add video to playlist when add button is clicked", async () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: "item-1",
+        playlistId: "playlist-1",
+        videoId: "video-1",
+        position: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
-        items: [],
-      },
-    };
-
-    const mockPlaylistItem = {
-      id: "item-1",
-      playlistId: "playlist-1",
-      videoId: "video-1",
-      position: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockPlaylistItem,
-    });
+      }),
+    } as Response);
 
     const { user } = render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -222,11 +163,10 @@ describe("PlaylistEditor", () => {
     await user.click(addButtons[0]);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         "/api/playlists/playlist-1/items",
         expect.objectContaining({
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ videoId: "video-1" }),
         })
       );
@@ -234,37 +174,28 @@ describe("PlaylistEditor", () => {
   });
 
   it("should remove video from playlist when remove button is clicked", async () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [
-          {
-            id: "item-1",
-            playlistId: "playlist-1",
-            videoId: "video-1",
-            position: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            video: mockVideos[0],
-          },
-        ],
-      },
+    const playlistWithItems: PlaylistWithDetails = {
+      ...mockPlaylist,
+      items: [
+        {
+          id: "item-1",
+          playlistId: "playlist-1",
+          videoId: "video-1",
+          position: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          video: mockVideos[0],
+        },
+      ],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      status: 204,
-    });
+    } as Response);
 
     const { user } = render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={playlistWithItems}
         availableVideos={mockVideos}
       />
     );
@@ -273,7 +204,7 @@ describe("PlaylistEditor", () => {
     await user.click(removeButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         "/api/playlists/playlist-1/items/item-1",
         expect.objectContaining({
           method: "DELETE",
@@ -283,32 +214,17 @@ describe("PlaylistEditor", () => {
   });
 
   it("should change playback mode when mode selector is changed", async () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [],
-      },
-    };
-
-    const mockUpdatedPlaylist = {
-      ...displayWithPlaylist.playlist,
-      playbackMode: "LOOP",
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockUpdatedPlaylist,
-    });
+      json: async () => ({
+        ...mockPlaylist,
+        playbackMode: "LOOP",
+      }),
+    } as Response);
 
     const { user } = render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -317,11 +233,10 @@ describe("PlaylistEditor", () => {
     await user.selectOptions(select, "LOOP");
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetch).toHaveBeenCalledWith(
         "/api/playlists/playlist-1",
         expect.objectContaining({
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ playbackMode: "LOOP" }),
         })
       );
@@ -329,41 +244,33 @@ describe("PlaylistEditor", () => {
   });
 
   it("should display playlist items in correct order", () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [
-          {
-            id: "item-1",
-            playlistId: "playlist-1",
-            videoId: "video-1",
-            position: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            video: mockVideos[0],
-          },
-          {
-            id: "item-2",
-            playlistId: "playlist-1",
-            videoId: "video-2",
-            position: 1,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            video: mockVideos[1],
-          },
-        ],
-      },
+    const playlistWithItems: PlaylistWithDetails = {
+      ...mockPlaylist,
+      items: [
+        {
+          id: "item-1",
+          playlistId: "playlist-1",
+          videoId: "video-1",
+          position: 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          video: mockVideos[0],
+        },
+        {
+          id: "item-2",
+          playlistId: "playlist-1",
+          videoId: "video-2",
+          position: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          video: mockVideos[1],
+        },
+      ],
     };
 
     render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={playlistWithItems}
         availableVideos={mockVideos}
       />
     );
@@ -374,23 +281,10 @@ describe("PlaylistEditor", () => {
     expect(items[1]).toHaveTextContent("Video 2");
   });
 
-  it("should show delete playlist button when playlist exists", () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [],
-      },
-    };
-
+  it("should show delete playlist button", () => {
     render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -399,28 +293,19 @@ describe("PlaylistEditor", () => {
   });
 
   it("should delete playlist when delete button is clicked and confirmed", async () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [],
-      },
-    };
-
     (global.confirm as ReturnType<typeof vi.fn>).mockReturnValueOnce(true);
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       status: 204,
     });
 
+    // Mock window.location.href
+    delete (window as any).location;
+    (window as any).location = { href: "" };
+
     const { user } = render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -437,29 +322,15 @@ describe("PlaylistEditor", () => {
       );
     });
 
-    // Should show the "no playlist" state
-    expect(screen.getByText(/no playlist configured/i)).toBeInTheDocument();
+    expect(window.location.href).toBe("/controller/playlists");
   });
 
   it("should not delete playlist when delete is cancelled", async () => {
-    const displayWithPlaylist: DisplayWithPlaylist = {
-      ...mockDisplayWithoutPlaylist,
-      playlist: {
-        id: "playlist-1",
-        displayId: "display-1",
-        playbackMode: "SEQUENCE",
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        items: [],
-      },
-    };
-
     (global.confirm as ReturnType<typeof vi.fn>).mockReturnValueOnce(false);
 
     const { user } = render(
       <PlaylistEditor
-        display={displayWithPlaylist}
+        playlist={mockPlaylist}
         availableVideos={mockVideos}
       />
     );
@@ -469,8 +340,5 @@ describe("PlaylistEditor", () => {
 
     // Should not make API call
     expect(global.fetch).not.toHaveBeenCalled();
-
-    // Playlist should still be there
-    expect(screen.queryByText(/no playlist configured/i)).not.toBeInTheDocument();
   });
 });

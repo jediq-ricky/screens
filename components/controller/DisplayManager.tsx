@@ -5,11 +5,13 @@ import Link from "next/link";
 import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
 
 type DisplayWithPlaylist = Display & {
-  playlist: (Playlist & {
-    items: (PlaylistItem & {
-      video: Video;
-    })[];
-  }) | null;
+  playlists: Array<{
+    playlist: Playlist & {
+      items: (PlaylistItem & {
+        video: Video;
+      })[];
+    };
+  }>;
 };
 
 interface DisplayManagerProps {
@@ -40,7 +42,7 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
 
       if (response.ok) {
         const newDisplay = await response.json();
-        setDisplays([{ ...newDisplay, playlist: null }, ...displays]);
+        setDisplays([{ ...newDisplay, playlists: [] }, ...displays]);
         setNewDisplayName("");
         setNewDisplayDescription("");
         setShowNewForm(false);
@@ -183,10 +185,10 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
                   </p>
                 </div>
 
-                {display.playlist && (
+                {display.playlists.length > 0 && (
                   <div className="text-sm">
                     <span className="text-gray-500">
-                      Playlist: {display.playlist.items.length} videos
+                      Playlist: {display.playlists[0].playlist.name} ({display.playlists[0].playlist.items.length} videos)
                     </span>
                   </div>
                 )}
@@ -199,10 +201,10 @@ export default function DisplayManager({ initialDisplays }: DisplayManagerProps)
 
                 <div className="space-y-2">
                   <Link
-                    href={`/controller/playlists/${display.id}`}
+                    href={`/controller/displays/${display.id}/playlist`}
                     className="mt-4 block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                   >
-                    Configure Playlist
+                    {display.playlists.length > 0 ? "Configure Playlist" : "Create Playlist"}
                   </Link>
                   <button
                     onClick={() => handleDelete(display.id, display.name)}
