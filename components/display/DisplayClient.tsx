@@ -113,6 +113,15 @@ export default function DisplayClient({ display }: DisplayClientProps) {
     }
   };
 
+  // Ensure video plays when index changes
+  useEffect(() => {
+    if (videoRef.current && hasVideos) {
+      videoRef.current.play().catch((error) => {
+        console.error("Error playing video:", error);
+      });
+    }
+  }, [currentVideoIndex, hasVideos]);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Status Bar */}
@@ -199,6 +208,7 @@ export default function DisplayClient({ display }: DisplayClientProps) {
               autoPlay
               muted
               playsInline
+              loop={playbackMode === "LOOP" && videos.length === 1}
               data-testid="video-player"
               onEnded={handleNext}
               onPlay={() => setIsPlaying(true)}

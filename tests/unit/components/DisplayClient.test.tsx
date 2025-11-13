@@ -31,6 +31,9 @@ describe("DisplayClient", () => {
         json: () => Promise.resolve({ success: true }),
       } as Response)
     );
+
+    // Mock HTMLMediaElement.play()
+    HTMLMediaElement.prototype.play = vi.fn().mockResolvedValue(undefined);
   });
 
   const mockVideos: Video[] = [
@@ -163,5 +166,69 @@ describe("DisplayClient", () => {
   it("should show playlist item count", () => {
     render(<DisplayClient display={mockDisplay} />);
     expect(screen.getByText(/2 videos/i)).toBeInTheDocument();
+  });
+
+  it("should set loop attribute on video when playlist has single video in LOOP mode", () => {
+    const singleVideoPlaylist: DisplayWithPlaylist = {
+      ...mockDisplay,
+      playlist: {
+        ...mockDisplay.playlist!,
+        playbackMode: "LOOP",
+        items: [
+          {
+            id: "item-1",
+            playlistId: "playlist-1",
+            videoId: "video-1",
+            position: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            video: mockVideos[0],
+          },
+        ],
+      },
+    };
+
+    render(<DisplayClient display={singleVideoPlaylist} />);
+    const video = screen.getByTestId("video-player") as HTMLVideoElement;
+    expect(video.loop).toBe(true);
+  });
+
+  it("should not set loop attribute when playlist has multiple videos in LOOP mode", () => {
+    const multiVideoLoopPlaylist: DisplayWithPlaylist = {
+      ...mockDisplay,
+      playlist: {
+        ...mockDisplay.playlist!,
+        playbackMode: "LOOP",
+      },
+    };
+
+    render(<DisplayClient display={multiVideoLoopPlaylist} />);
+    const video = screen.getByTestId("video-player") as HTMLVideoElement;
+    expect(video.loop).toBe(false);
+  });
+
+  it("should not set loop attribute when playlist has single video in SEQUENCE mode", () => {
+    const singleVideoSequence: DisplayWithPlaylist = {
+      ...mockDisplay,
+      playlist: {
+        ...mockDisplay.playlist!,
+        playbackMode: "SEQUENCE",
+        items: [
+          {
+            id: "item-1",
+            playlistId: "playlist-1",
+            videoId: "video-1",
+            position: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            video: mockVideos[0],
+          },
+        ],
+      },
+    };
+
+    render(<DisplayClient display={singleVideoSequence} />);
+    const video = screen.getByTestId("video-player") as HTMLVideoElement;
+    expect(video.loop).toBe(false);
   });
 });
