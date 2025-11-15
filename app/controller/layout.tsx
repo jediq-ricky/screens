@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MobileNav from "@/components/controller/MobileNav";
 
 export default function ControllerLayout({
   children,
@@ -7,10 +8,10 @@ export default function ControllerLayout({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-sm border-b relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
+            <div className="flex items-center">
               <Link
                 href="/controller"
                 className="flex items-center px-2 text-xl font-bold text-gray-900"
@@ -43,6 +44,9 @@ export default function ControllerLayout({
                   Playlists
                 </Link>
               </div>
+            </div>
+            <div className="flex items-center">
+              <MobileNav />
             </div>
           </div>
         </div>
