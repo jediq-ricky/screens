@@ -170,4 +170,54 @@ describe("Display Authentication Integration", () => {
       expect(found?.id).toBe(randomDisplay.id);
     });
   });
+
+  describe("Display Controls Configuration", () => {
+    it("should default showControls to true when creating display", async () => {
+      const token = generateDisplayToken();
+
+      const display = await prisma.display.create({
+        data: {
+          name: "Test Display",
+          token,
+        },
+      });
+
+      expect(display.showControls).toBe(true);
+    });
+
+    it("should allow setting showControls to false on creation", async () => {
+      const token = generateDisplayToken();
+
+      const display = await prisma.display.create({
+        data: {
+          name: "Test Display",
+          token,
+          showControls: false,
+        },
+      });
+
+      expect(display.showControls).toBe(false);
+    });
+
+    it("should update showControls via PATCH", async () => {
+      const token = generateDisplayToken();
+
+      const display = await prisma.display.create({
+        data: {
+          name: "Test Display",
+          token,
+          showControls: true,
+        },
+      });
+
+      expect(display.showControls).toBe(true);
+
+      const updated = await prisma.display.update({
+        where: { id: display.id },
+        data: { showControls: false },
+      });
+
+      expect(updated.showControls).toBe(false);
+    });
+  });
 });

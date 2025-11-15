@@ -20,6 +20,7 @@ export async function GET(
         name: true,
         description: true,
         isActive: true,
+        showControls: true,
         lastSeenAt: true,
         createdAt: true,
         updatedAt: true,
@@ -73,17 +74,29 @@ export async function PATCH(
         ...(allowedUpdates.isActive !== undefined && {
           isActive: allowedUpdates.isActive,
         }),
+        ...(allowedUpdates.showControls !== undefined && {
+          showControls: allowedUpdates.showControls,
+        }),
       },
       select: {
         id: true,
         name: true,
         description: true,
         isActive: true,
+        showControls: true,
         lastSeenAt: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    // Notify connected displays about the update
+    if (allowedUpdates.showControls !== undefined) {
+      const { sseManager } = await import("@/lib/sse");
+      sseManager.sendToDisplay(id, "display-updated", {
+        showControls: display.showControls,
+      });
+    }
 
     return NextResponse.json(display);
   } catch (error) {

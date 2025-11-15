@@ -11,6 +11,7 @@ export async function GET() {
         name: true,
         description: true,
         isActive: true,
+        showControls: true,
         lastSeenAt: true,
         createdAt: true,
         updatedAt: true,
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name.trim(),
         description: body.description?.trim() || null,
+        showControls: typeof body.showControls === "boolean" ? body.showControls : true,
         token,
       },
     });

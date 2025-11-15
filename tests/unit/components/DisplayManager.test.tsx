@@ -18,6 +18,7 @@ const mockDisplays: DisplayWithPlaylist[] = [
     description: "Main lobby screen",
     token: "token123token123token123token123",
     isActive: true,
+    showControls: true,
     lastSeenAt: new Date("2024-01-01"),
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
@@ -29,6 +30,7 @@ const mockDisplays: DisplayWithPlaylist[] = [
     description: null,
     token: "token456token456token456token456",
     isActive: false,
+    showControls: true,
     lastSeenAt: null,
     createdAt: new Date("2024-01-02"),
     updatedAt: new Date("2024-01-02"),
@@ -129,6 +131,7 @@ describe("DisplayManager Component", () => {
         body: JSON.stringify({
           name: "New Display",
           description: "Test description",
+          showControls: true,
         }),
       });
     });

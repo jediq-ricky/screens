@@ -69,6 +69,7 @@ describe("DisplayClient", () => {
     token: "abcdefghijklmnopqrstuvwxyz123456",
     description: "Test Description",
     isActive: true,
+    showControls: true,
     lastSeenAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),

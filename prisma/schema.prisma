@@ -32,14 +32,15 @@ model Video {
 
 // Physical display devices
 model Display {
-  id          String    @id @default(cuid())
-  name        String
-  token       String    @unique // Unique authentication token
-  description String?
-  isActive    Boolean   @default(true)
-  lastSeenAt  DateTime? // Last connection timestamp
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  name         String
+  token        String    @unique // Unique authentication token
+  description  String?
+  isActive     Boolean   @default(true)
+  showControls Boolean   @default(true) // Show UI controls/furniture on display
+  lastSeenAt   DateTime? // Last connection timestamp
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
   playlist Playlist? // Legacy 1:1 relationship (will be removed)

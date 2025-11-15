@@ -24,6 +24,7 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
   const [showNewForm, setShowNewForm] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState("");
   const [newDisplayDescription, setNewDisplayDescription] = useState("");
+  const [newDisplayShowControls, setNewDisplayShowControls] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateDisplay = async (e: React.FormEvent) => {
@@ -38,6 +39,7 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
         body: JSON.stringify({
           name: newDisplayName,
           description: newDisplayDescription || undefined,
+          showControls: newDisplayShowControls,
         }),
       });
 
@@ -46,6 +48,7 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
         setDisplays([{ ...newDisplay, playlists: [] }, ...displays]);
         setNewDisplayName("");
         setNewDisplayDescription("");
+        setNewDisplayShowControls(true);
         setShowNewForm(false);
       }
     } catch (error) {
@@ -111,6 +114,31 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
     }
   };
 
+  const handleShowControlsChange = async (displayId: string, showControls: boolean) => {
+    // Optimistic update
+    setDisplays(displays.map(d =>
+      d.id === displayId ? { ...d, showControls } : d
+    ));
+
+    try {
+      const response = await fetch(`/api/displays/${displayId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showControls }),
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setDisplays(displays.map(d =>
+          d.id === displayId ? { ...d, showControls: !showControls } : d
+        ));
+        throw new Error("Failed to update display settings");
+      }
+    } catch (error) {
+      alert("Failed to update display settings. Please try again.");
+    }
+  };
+
   return (
     <div>
       {/* Create New Display Button */}
@@ -155,6 +183,20 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Optional description"
               />
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={newDisplayShowControls}
+                  onChange={(e) => setNewDisplayShowControls(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                Show Controls on Display
+              </label>
+              <p className="text-xs text-gray-500 mt-1 ml-6">
+                Enable to show UI controls during setup. Disable for production use.
+              </p>
             </div>
             <div className="flex gap-2">
               <button
@@ -215,9 +257,7 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
                 <div className="text-sm">
                   <span className="text-gray-500">Display URL:</span>
                   <p className="font-mono text-xs bg-gray-50 p-2 rounded mt-1 break-all">
-                    {typeof window !== "undefined"
-                      ? `${window.location.origin}/display/${display.token}`
-                      : `/display/${display.token}`}
+                    /display/{display.token}
                   </p>
                 </div>
 
@@ -246,6 +286,19 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
                     {display.playlists[0].playlist.items.length} video{display.playlists[0].playlist.items.length !== 1 ? 's' : ''}
                   </div>
                 )}
+
+                {/* Show Controls Toggle */}
+                <div className="mb-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={display.showControls}
+                      onChange={(e) => handleShowControlsChange(display.id, e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    Show Controls
+                  </label>
+                </div>
 
                 {display.lastSeenAt && (
                   <div className="text-sm text-gray-500">

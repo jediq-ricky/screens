@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 export interface SSEOptions {
   url: string;
@@ -85,18 +85,20 @@ export function useSSE(options: SSEOptions) {
   };
 
   // Subscribe to specific event types
-  const addEventListener = (eventType: string, listener: (event: MessageEvent) => void) => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.addEventListener(eventType, listener as EventListener);
+  const addEventListener = useCallback((eventType: string, listener: (event: MessageEvent) => void) => {
+    const eventSource = eventSourceRef.current;
+    if (eventSource) {
+      eventSource.addEventListener(eventType, listener as EventListener);
     }
-  };
+  }, []);
 
   // Remove event listener
-  const removeEventListener = (eventType: string, listener: (event: MessageEvent) => void) => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.removeEventListener(eventType, listener as EventListener);
+  const removeEventListener = useCallback((eventType: string, listener: (event: MessageEvent) => void) => {
+    const eventSource = eventSourceRef.current;
+    if (eventSource) {
+      eventSource.removeEventListener(eventType, listener as EventListener);
     }
-  };
+  }, []);
 
   // Connect on mount
   useEffect(() => {

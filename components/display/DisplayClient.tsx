@@ -114,6 +114,25 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
     return () => removeEventListener("playlist-updated", handlePlaylistUpdate);
   }, [addEventListener, removeEventListener, display.id, videos.length]);
 
+  // Listen for display settings updates
+  useEffect(() => {
+    const handleDisplayUpdate = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // Update display settings (like showControls)
+        if (data.showControls !== undefined) {
+          setDisplay((prev) => ({ ...prev, showControls: data.showControls }));
+        }
+      } catch (error) {
+        console.error("Error handling display update:", error);
+      }
+    };
+
+    addEventListener("display-updated", handleDisplayUpdate);
+    return () => removeEventListener("display-updated", handleDisplayUpdate);
+  }, [addEventListener, removeEventListener, display.showControls]);
+
   // Send playback status updates
   useEffect(() => {
     if (!hasVideos) return;
@@ -188,64 +207,71 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Status Bar */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{display.name}</h1>
-            {display.description && (
-              <p className="text-sm text-gray-300">{display.description}</p>
-            )}
-          </div>
+    <div className={`min-h-screen bg-black text-white ${display.showControls ? 'border-8 border-white' : ''}`}>
+      {/* White border overlay - only show if showControls is true */}
+      {display.showControls && (
+        <div className="absolute inset-0 pointer-events-none z-50 border-8 border-white" />
+      )}
 
-          <div className="flex items-center gap-4">
-            {/* Display Status */}
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  display.isActive ? "bg-green-500" : "bg-gray-500"
-                }`}
-              />
-              <span className="text-sm">
-                {display.isActive ? "Active" : "Inactive"}
-              </span>
+      {/* Status Bar - only show if showControls is true */}
+      {display.showControls && (
+        <div className="absolute top-0 left-0 right-0 z-10 bg-black p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">{display.name}</h1>
+              {display.description && (
+                <p className="text-sm text-gray-300">{display.description}</p>
+              )}
             </div>
 
-            {/* Connection Status */}
-            <div
-              className="flex items-center gap-2"
-              data-testid="connection-status"
-            >
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  isConnected ? "bg-green-500" : "bg-red-500"
-                }`}
-              />
-              <span className="text-sm">
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Playlist Info */}
-        {display.playlist && (
-          <div className="mt-2 text-sm text-gray-300">
-            <span className="capitalize">{playbackMode?.toLowerCase()}</span>
-            {" • "}
-            <span>{videos.length} videos in playlist</span>
-            {hasVideos && (
-              <>
-                {" • "}
-                <span>
-                  Playing {currentVideoIndex + 1} of {videos.length}
+            <div className="flex items-center gap-4">
+              {/* Display Status */}
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    display.isActive ? "bg-green-500" : "bg-gray-500"
+                  }`}
+                />
+                <span className="text-sm">
+                  {display.isActive ? "Active" : "Inactive"}
                 </span>
-              </>
-            )}
+              </div>
+
+              {/* Connection Status */}
+              <div
+                className="flex items-center gap-2"
+                data-testid="connection-status"
+              >
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    isConnected ? "bg-green-500" : "bg-red-500"
+                  }`}
+                />
+                <span className="text-sm">
+                  {isConnected ? "Connected" : "Disconnected"}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Playlist Info */}
+          {display.playlist && (
+            <div className="mt-2 text-sm text-gray-300">
+              <span className="capitalize">{playbackMode?.toLowerCase()}</span>
+              {" • "}
+              <span>{videos.length} videos in playlist</span>
+              {hasVideos && (
+                <>
+                  {" • "}
+                  <span>
+                    Playing {currentVideoIndex + 1} of {videos.length}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex items-center justify-center min-h-screen">
@@ -289,8 +315,8 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
         )}
       </div>
 
-      {/* Debug Info (only in development) */}
-      {process.env.NODE_ENV === "development" && hasVideos && (
+      {/* Debug Info (only in development and when showControls is true) */}
+      {process.env.NODE_ENV === "development" && hasVideos && display.showControls && (
         <div className="absolute bottom-4 right-4 bg-black/80 p-4 rounded text-xs">
           <p>Current: {videos[currentVideoIndex].title}</p>
           <p>Mode: {playbackMode}</p>
