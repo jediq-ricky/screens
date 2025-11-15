@@ -20,6 +20,7 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
   const [display, setDisplay] = useState(initialDisplay);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isInGap, setIsInGap] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const videos = display.playlist?.items.map((item) => item.video) || [];
@@ -154,42 +155,77 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
       }
     };
 
-    // Send initial status
+    // Send status immediately when state changes
     sendStatus();
 
-    // Send status every 10 seconds
+    // Also send status every 10 seconds as a heartbeat
     const interval = setInterval(sendStatus, 10000);
     return () => clearInterval(interval);
   }, [display.id, currentVideoIndex, isPlaying, hasVideos, videos]);
 
   const handleNext = () => {
-    if (playbackMode === "SEQUENCE") {
-      if (currentVideoIndex < videos.length - 1) {
-        setCurrentVideoIndex(currentVideoIndex + 1);
+    const videoGap = (display.playlist?.videoGap || 0) * 1000; // Convert to milliseconds
+
+    const advance = () => {
+      if (playbackMode === "SEQUENCE") {
+        if (currentVideoIndex < videos.length - 1) {
+          setCurrentVideoIndex(currentVideoIndex + 1);
+        }
+      } else if (playbackMode === "LOOP") {
+        setCurrentVideoIndex((currentVideoIndex + 1) % videos.length);
       }
-    } else if (playbackMode === "LOOP") {
-      setCurrentVideoIndex((currentVideoIndex + 1) % videos.length);
+    };
+
+    if (videoGap > 0) {
+      // Mark as paused and in gap (will show black screen)
+      setIsPlaying(false);
+      setIsInGap(true);
+      setTimeout(() => {
+        setIsInGap(false);
+        advance();
+      }, videoGap);
+    } else {
+      advance();
     }
   };
 
   const handlePrevious = () => {
-    if (currentVideoIndex > 0) {
-      setCurrentVideoIndex(currentVideoIndex - 1);
-    } else if (playbackMode === "LOOP") {
-      setCurrentVideoIndex(videos.length - 1);
+    const videoGap = (display.playlist?.videoGap || 0) * 1000; // Convert to milliseconds
+
+    const goBack = () => {
+      if (currentVideoIndex > 0) {
+        setCurrentVideoIndex(currentVideoIndex - 1);
+      } else if (playbackMode === "LOOP") {
+        setCurrentVideoIndex(videos.length - 1);
+      }
+    };
+
+    if (videoGap > 0) {
+      // Mark as paused and in gap (will show black screen)
+      setIsPlaying(false);
+      setIsInGap(true);
+      setTimeout(() => {
+        setIsInGap(false);
+        goBack();
+      }, videoGap);
+    } else {
+      goBack();
     }
   };
 
-  // Ensure video plays when index changes
+  // Ensure video plays when index changes and immediately mark as playing
   useEffect(() => {
     if (videoRef.current && hasVideos) {
+      // Immediately mark as playing when video index changes (will auto-play)
+      setIsPlaying(true);
       videoRef.current.play().catch((error) => {
         console.error("Error playing video:", error);
+        setIsPlaying(false);
       });
     }
   }, [currentVideoIndex, hasVideos]);
 
-  // Track actual video play/pause state
+  // Track actual video play/pause state (only for user-initiated actions)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -290,11 +326,13 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
             </p>
           </div>
         ) : (
-          <div className="w-full h-screen">
+          <div className="w-full h-screen relative">
             <video
               ref={videoRef}
               key={videos[currentVideoIndex].id}
-              className="w-full h-full object-contain"
+              className={`w-full h-full object-contain transition-opacity duration-500 ${
+                isInGap ? "opacity-0" : "opacity-100"
+              }`}
               src={videos[currentVideoIndex].blobUrl}
               autoPlay
               muted
@@ -302,8 +340,6 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
               loop={playbackMode === "LOOP" && videos.length === 1}
               data-testid="video-player"
               onEnded={handleNext}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
             >
               <source
                 src={videos[currentVideoIndex].blobUrl}
@@ -311,6 +347,9 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
               />
               Your browser does not support the video tag.
             </video>
+            {isInGap && (
+              <div className="absolute inset-0 bg-black" />
+            )}
           </div>
         )}
       </div>

@@ -107,6 +107,23 @@ export default function PlaylistEditor({ playlist: initialPlaylist, availableVid
     }
   };
 
+  const handleChangeVideoGap = async (gap: number) => {
+    try {
+      const response = await fetch(`/api/playlists/${playlist.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoGap: gap }),
+      });
+
+      if (response.ok) {
+        const updatedPlaylist = await response.json();
+        setPlaylist({ ...playlist, videoGap: updatedPlaylist.videoGap });
+      }
+    } catch (error) {
+      console.error("Failed to update video gap:", error);
+    }
+  };
+
   const handleDeletePlaylist = async () => {
     if (!confirm("Are you sure you want to delete this playlist? All playlist items will be removed.")) {
       return;
@@ -193,8 +210,8 @@ export default function PlaylistEditor({ playlist: initialPlaylist, availableVid
 
         {/* Playback Mode and Delete */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 mr-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
               <label htmlFor="playback-mode" className="block text-sm font-medium text-gray-700 mb-2">
                 Playback Mode
               </label>
@@ -209,6 +226,20 @@ export default function PlaylistEditor({ playlist: initialPlaylist, availableVid
                 <option value="LOOP">Loop</option>
                 <option value="MANUAL">Manual</option>
               </select>
+            </div>
+            <div className="flex-1">
+              <label htmlFor="video-gap" className="block text-sm font-medium text-gray-700 mb-2">
+                Gap Between Videos (seconds)
+              </label>
+              <input
+                id="video-gap"
+                type="number"
+                min="0"
+                max="60"
+                value={playlist.videoGap}
+                onChange={(e) => handleChangeVideoGap(parseInt(e.target.value, 10) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
             <div className="pt-7">
               <button

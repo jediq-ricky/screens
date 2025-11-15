@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@/lib/test-utils";
+import { render, screen, waitFor, fireEvent } from "@/lib/test-utils";
 import PlaylistEditor from "@/components/controller/PlaylistEditor";
 import type { Display, Playlist, PlaylistItem, Video, DisplayPlaylist } from "@/lib/generated/prisma";
 
@@ -62,6 +62,7 @@ describe("PlaylistEditor", () => {
     name: "Test Playlist",
     description: null,
     playbackMode: "SEQUENCE",
+    videoGap: 0,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -340,5 +341,96 @@ describe("PlaylistEditor", () => {
 
     // Should not make API call
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("should render videoGap input with default value", () => {
+    render(
+      <PlaylistEditor
+        playlist={mockPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const input = screen.getByLabelText(/gap between videos/i);
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveValue(0);
+  });
+
+  it("should render videoGap input with custom value", () => {
+    const playlistWithGap = { ...mockPlaylist, videoGap: 15 };
+    render(
+      <PlaylistEditor
+        playlist={playlistWithGap}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const input = screen.getByLabelText(/gap between videos/i);
+    expect(input).toHaveValue(15);
+  });
+
+  it("should update videoGap when input is changed", async () => {
+    // Mock fetch for all calls
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...mockPlaylist,
+        videoGap: 10,
+      }),
+    } as Response);
+
+    render(
+      <PlaylistEditor
+        playlist={mockPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const input = screen.getByLabelText(/gap between videos/i) as HTMLInputElement;
+
+    // Use fireEvent to trigger onChange
+    fireEvent.change(input, { target: { value: "10" } });
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/playlists/playlist-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ videoGap: 10 }),
+        })
+      );
+    });
+  });
+
+  it("should handle videoGap input with maximum value (60)", async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ...mockPlaylist,
+        videoGap: 60,
+      }),
+    } as Response);
+
+    render(
+      <PlaylistEditor
+        playlist={mockPlaylist}
+        availableVideos={mockVideos}
+      />
+    );
+
+    const input = screen.getByLabelText(/gap between videos/i) as HTMLInputElement;
+
+    // Use fireEvent to trigger onChange
+    fireEvent.change(input, { target: { value: "60" } });
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/playlists/playlist-1",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ videoGap: 60 }),
+        })
+      );
+    });
   });
 });

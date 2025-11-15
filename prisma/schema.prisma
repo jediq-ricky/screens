@@ -57,6 +57,7 @@ model Playlist {
   name         String       @default("")
   description  String?
   playbackMode PlaybackMode @default(SEQUENCE)
+  videoGap     Int          @default(0) // Gap in seconds between videos
   isActive     Boolean      @default(true)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

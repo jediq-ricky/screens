@@ -21,6 +21,23 @@ describe("Playlist Integration Tests", () => {
       expect(playlist.displayId).toBe(display.id);
       expect(playlist.playbackMode).toBe("SEQUENCE");
       expect(playlist.isActive).toBe(true);
+      expect(playlist.videoGap).toBe(0); // Default value
+    });
+
+    it("should create a playlist with custom videoGap", async () => {
+      const display = await testPrisma.display.create({
+        data: { name: "Test Display", token: "test-token-12345678901234567890" },
+      });
+
+      const playlist = await testPrisma.playlist.create({
+        data: {
+          displayId: display.id,
+          playbackMode: "LOOP",
+          videoGap: 10,
+        },
+      });
+
+      expect(playlist.videoGap).toBe(10);
     });
 
     it("should prevent duplicate playlists for the same display", async () => {
@@ -103,6 +120,22 @@ describe("Playlist Integration Tests", () => {
       });
 
       expect(updated.isActive).toBe(false);
+    });
+
+    it("should update playlist videoGap", async () => {
+      const display = await testPrisma.display.create({
+        data: { name: "Test Display", token: "test-token-12345678901234567890" },
+      });
+      const playlist = await testPrisma.playlist.create({
+        data: { displayId: display.id, playbackMode: "SEQUENCE" },
+      });
+
+      const updated = await testPrisma.playlist.update({
+        where: { id: playlist.id },
+        data: { videoGap: 5 },
+      });
+
+      expect(updated.videoGap).toBe(5);
     });
   });
 

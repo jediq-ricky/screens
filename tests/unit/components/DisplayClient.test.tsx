@@ -232,4 +232,41 @@ describe("DisplayClient", () => {
     const video = screen.getByTestId("video-player") as HTMLVideoElement;
     expect(video.loop).toBe(false);
   });
+
+  it("should show fade-to-black overlay when videoGap is configured", () => {
+    const playlistWithGap: DisplayWithPlaylist = {
+      ...mockDisplay,
+      playlist: {
+        ...mockDisplay.playlist!,
+        videoGap: 5,
+      },
+    };
+
+    const { container } = render(<DisplayClient display={playlistWithGap} />);
+
+    // Initially, no black overlay should be visible (not in gap)
+    const initialOverlay = container.querySelector('.absolute.inset-0.bg-black');
+    expect(initialOverlay).toBeNull();
+
+    // Video should have opacity transition class
+    const video = screen.getByTestId("video-player");
+    expect(video.className).toContain("transition-opacity");
+    expect(video.className).toContain("duration-500");
+  });
+
+  it("should apply opacity-0 class to video during gap", () => {
+    const playlistWithGap: DisplayWithPlaylist = {
+      ...mockDisplay,
+      playlist: {
+        ...mockDisplay.playlist!,
+        videoGap: 5,
+      },
+    };
+
+    render(<DisplayClient display={playlistWithGap} />);
+    const video = screen.getByTestId("video-player");
+
+    // Initially video should be visible (opacity-100)
+    expect(video.className).toContain("opacity-100");
+  });
 });

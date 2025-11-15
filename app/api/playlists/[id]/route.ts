@@ -9,7 +9,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { playbackMode, isActive, name, description } = body;
+    const { playbackMode, isActive, name, description, videoGap } = body;
 
     // Validate playback mode if provided
     if (playbackMode) {
@@ -17,6 +17,16 @@ export async function PATCH(
       if (!validModes.includes(playbackMode)) {
         return NextResponse.json(
           { error: "Invalid playback mode" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate videoGap if provided
+    if (videoGap !== undefined) {
+      if (typeof videoGap !== "number" || videoGap < 0 || videoGap > 60) {
+        return NextResponse.json(
+          { error: "Video gap must be a number between 0 and 60 seconds" },
           { status: 400 }
         );
       }
@@ -39,12 +49,14 @@ export async function PATCH(
       isActive?: boolean;
       name?: string;
       description?: string | null;
+      videoGap?: number;
     } = {};
 
     if (playbackMode) updateData.playbackMode = playbackMode;
     if (typeof isActive === "boolean") updateData.isActive = isActive;
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
+    if (videoGap !== undefined) updateData.videoGap = videoGap;
 
     const playlist = await prisma.playlist.update({
       where: { id },
