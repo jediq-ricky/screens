@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
+import PlaylistCreate from "@/components/controller/PlaylistCreate";
 
 export default async function PlaylistsPage() {
   const playlists = await prisma.playlist.findMany({
@@ -20,6 +21,7 @@ export default async function PlaylistsPage() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Playlists</h1>
+        <PlaylistCreate />
       </div>
 
       {playlists.length === 0 ? (
