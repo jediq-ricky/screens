@@ -90,12 +90,14 @@ model DisplayPlaylist {
 
 // Individual videos in a playlist with ordering
 model PlaylistItem {
-  id         String   @id @default(cuid())
-  playlistId String
-  videoId    String
-  position   Int      // Order in playlist (0-indexed)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String      @id @default(cuid())
+  playlistId  String
+  videoId     String
+  position    Int         // Order in playlist (0-indexed)
+  triggerType TriggerType @default(NONE) // Type of trigger for MANUAL playlists
+  triggerConfig Json?     // Configuration for the trigger (key, coordinates, sensitivity, etc.)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relations
   playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
@@ -111,4 +113,13 @@ enum PlaybackMode {
   LOOP     // Loop through playlist continuously
   SEQUENCE // Play through once and stop
   MANUAL   // Wait for manual trigger from controller
+}
+
+// Trigger type enumeration for MANUAL playlists
+enum TriggerType {
+  NONE     // No trigger (default, controller-triggered)
+  KEYBOARD // Keyboard key press
+  CLICK    // Mouse click on screen region
+  WEBCAM   // Webcam motion detection
+  MICROPHONE // Microphone sound detection
 }

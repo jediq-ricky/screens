@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Playlist, PlaylistItem, Video, DisplayPlaylist, Display } from "@/lib/generated/prisma";
+import type { Playlist, PlaylistItem, Video, DisplayPlaylist, Display, TriggerType } from "@/lib/generated/prisma";
+import TriggerConfig from "./TriggerConfig";
 
 type PlaylistWithDetails = Playlist & {
   items: (PlaylistItem & {
@@ -145,6 +146,17 @@ export default function PlaylistEditor({ playlist: initialPlaylist, availableVid
     }
   };
 
+  const handleUpdateTrigger = (itemId: string, triggerType: TriggerType, triggerConfig: Record<string, unknown> | null) => {
+    setPlaylist({
+      ...playlist,
+      items: playlist.items.map((item) =>
+        item.id === itemId
+          ? { ...item, triggerType, triggerConfig: triggerConfig as any }
+          : item
+      ),
+    });
+  };
+
   const videoIdsInPlaylist = new Set(playlist.items.map((item) => item.videoId));
   const availableToAdd = availableVideos.filter((v) => !videoIdsInPlaylist.has(v.id));
 
@@ -264,25 +276,36 @@ export default function PlaylistEditor({ playlist: initialPlaylist, availableVid
                     <div
                       key={item.id}
                       data-testid={`playlist-item-${index}`}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      className="p-3 bg-gray-50 rounded-lg border border-gray-200"
                     >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-sm font-medium text-gray-500 w-8">
-                          {index + 1}.
-                        </span>
-                        <div>
-                          <p className="font-medium text-gray-900">{item.video.title}</p>
-                          {item.video.description && (
-                            <p className="text-sm text-gray-500">{item.video.description}</p>
-                          )}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm font-medium text-gray-500 w-8">
+                            {index + 1}.
+                          </span>
+                          <div>
+                            <p className="font-medium text-gray-900">{item.video.title}</p>
+                            {item.video.description && (
+                              <p className="text-sm text-gray-500">{item.video.description}</p>
+                            )}
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleRemoveVideo(item.id)}
+                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleRemoveVideo(item.id)}
-                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-                      >
-                        Remove
-                      </button>
+                      {playlist.playbackMode === "MANUAL" && (
+                        <TriggerConfig
+                          itemId={item.id}
+                          playlistId={playlist.id}
+                          triggerType={item.triggerType}
+                          triggerConfig={item.triggerConfig as Record<string, unknown> | null}
+                          onUpdate={handleUpdateTrigger}
+                        />
+                      )}
                     </div>
                   ))}
               </div>

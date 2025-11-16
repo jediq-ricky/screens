@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Display, Playlist, PlaylistItem, Video } from "@/lib/generated/prisma";
+import TriggerController from "./TriggerController";
 
 type DisplayWithPlaylist = Display & {
   playlists: Array<{
@@ -305,6 +306,9 @@ export default function DisplayManager({ initialDisplays, availablePlaylists }: 
                     Last seen: {new Date(display.lastSeenAt).toLocaleString()}
                   </div>
                 )}
+
+                {/* Trigger Controller for MANUAL playlists */}
+                <TriggerController display={display} />
 
                 <div className="space-y-2 mt-4">
                   {display.playlists.length > 0 && (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSSE } from "@/lib/hooks/useSSE";
 import type { Display, Playlist, PlaylistItem, Video, DisplayPlaylist } from "@/lib/generated/prisma";
+import TriggerController from "./TriggerController";
 
 type DisplayWithPlaylist = Display & {
   playlists: Array<DisplayPlaylist & {
@@ -216,6 +217,9 @@ export default function MonitorDashboard({ initialDisplays }: MonitorDashboardPr
                     </button>
                   </div>
                 )}
+
+                {/* Trigger Controller for MANUAL playlists */}
+                <TriggerController display={display} />
               </div>
             );
           })}

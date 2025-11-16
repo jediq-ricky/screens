@@ -21,6 +21,7 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isInGap, setIsInGap] = useState(false);
+  const [videoKey, setVideoKey] = useState(0); // Force video remount
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const videos = display.playlist?.items.map((item) => item.video) || [];
@@ -57,7 +58,11 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
         } else if (data.command === "previous") {
           handlePrevious();
         } else if (data.command === "skip" && typeof data.index === "number") {
+          // Clear the black screen and play the new video
+          setIsInGap(false);
           setCurrentVideoIndex(data.index);
+          // Force video to restart even if it's the same index
+          setVideoKey(prev => prev + 1);
         }
       } catch (error) {
         console.error("Error handling control command:", error);
@@ -164,6 +169,13 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
   }, [display.id, currentVideoIndex, isPlaying, hasVideos, videos]);
 
   const handleNext = () => {
+    // For MANUAL playlists, don't auto-advance - just fade to black
+    if (playbackMode === "MANUAL") {
+      setIsPlaying(false);
+      setIsInGap(true);
+      return;
+    }
+
     const videoGap = (display.playlist?.videoGap || 0) * 1000; // Convert to milliseconds
 
     const advance = () => {
@@ -329,7 +341,7 @@ export default function DisplayClient({ display: initialDisplay }: DisplayClient
           <div className="w-full h-screen relative">
             <video
               ref={videoRef}
-              key={videos[currentVideoIndex].id}
+              key={`${videos[currentVideoIndex].id}-${videoKey}`}
               className={`w-full h-full object-contain transition-opacity duration-500 ${
                 isInGap ? "opacity-0" : "opacity-100"
               }`}

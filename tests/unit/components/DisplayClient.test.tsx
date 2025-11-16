@@ -269,4 +269,73 @@ describe("DisplayClient", () => {
     // Initially video should be visible (opacity-100)
     expect(video.className).toContain("opacity-100");
   });
+
+  describe("MANUAL Playback Mode", () => {
+    it("should render playlist in MANUAL mode", () => {
+      const manualPlaylist: DisplayWithPlaylist = {
+        ...mockDisplay,
+        playlist: {
+          ...mockDisplay.playlist!,
+          playbackMode: "MANUAL",
+        },
+      };
+
+      render(<DisplayClient display={manualPlaylist} />);
+      expect(screen.getByText(/manual/i)).toBeInTheDocument();
+    });
+
+    it("should not auto-loop single video in MANUAL mode", () => {
+      const manualSingleVideo: DisplayWithPlaylist = {
+        ...mockDisplay,
+        playlist: {
+          ...mockDisplay.playlist!,
+          playbackMode: "MANUAL",
+          items: [
+            {
+              id: "item-1",
+              playlistId: "playlist-1",
+              videoId: "video-1",
+              position: 0,
+              triggerType: "KEYBOARD",
+              triggerConfig: { key: "1" },
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              video: mockVideos[0],
+            },
+          ],
+        },
+      };
+
+      render(<DisplayClient display={manualSingleVideo} />);
+      const video = screen.getByTestId("video-player") as HTMLVideoElement;
+      expect(video.loop).toBe(false);
+    });
+
+    it("should include trigger fields in playlist items", () => {
+      const manualWithTrigger: DisplayWithPlaylist = {
+        ...mockDisplay,
+        playlist: {
+          ...mockDisplay.playlist!,
+          playbackMode: "MANUAL",
+          items: [
+            {
+              id: "item-1",
+              playlistId: "playlist-1",
+              videoId: "video-1",
+              position: 0,
+              triggerType: "KEYBOARD",
+              triggerConfig: { key: "1" },
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              video: mockVideos[0],
+            },
+          ],
+        },
+      };
+
+      render(<DisplayClient display={manualWithTrigger} />);
+      // Just verify it renders without error
+      expect(screen.getByTestId("video-player")).toBeInTheDocument();
+    });
+  });
 });
